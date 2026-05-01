@@ -6,161 +6,212 @@ class NearbyPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        // --- 1. Placeholder Map Background ---
-        Container(
-          width: double.infinity,
-          height: double.infinity,
-          decoration: BoxDecoration(
-            color: AppColors.background,
-            // Bikin pattern grid simple biar kerasa kayak peta yang lagi loading
-            image: DecorationImage(
-              image: const NetworkImage(
-                  'https://www.transparenttextures.com/patterns/graphy.png'),
-              repeat: ImageRepeat.repeat,
-              colorFilter: ColorFilter.mode(
-                AppColors.primaryBlue.withOpacity(0.1),
-                BlendMode.srcIn,
-              ),
-            ),
+    // Scaffold ini nih penyelamat dari layar merah!
+    return Scaffold(
+      backgroundColor: AppColors.background,
+      appBar: AppBar(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        leading: IconButton(
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: AppColors.primaryBlue,
           ),
-          child: Center(
+          onPressed: () {
+            // Cek kalo ada tumpukan halaman, baru bisa di-pop (back)
+            if (Navigator.canPop(context)) {
+              Navigator.pop(context);
+            }
+          },
+        ),
+        title: const Text(
+          'Nearby Locations',
+          style: TextStyle(
+            color: AppColors.textPrimary,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        centerTitle: true,
+      ),
+      body: Stack(
+        children: [
+          // --- 1. DUMMY MAPS (Background) ---
+          Container(
+            width: double.infinity,
+            height: double.infinity,
+            decoration: BoxDecoration(
+              color: const Color(0xFFE0E5EC), // Warna abu-abu ala base map
+            ),
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                Icon(Icons.map_outlined, size: 80, color: Colors.grey.withOpacity(0.3)),
+                Icon(Icons.map_rounded, size: 100, color: Colors.grey.shade400),
                 const SizedBox(height: 16),
                 Text(
-                  'Map View\n(Integration Coming Soon)',
-                  textAlign: TextAlign.center,
-                  style: TextStyle(color: Colors.grey.withOpacity(0.6), fontWeight: FontWeight.bold),
+                  'Google Maps Services Loading...',
+                  style: TextStyle(
+                    color: Colors.grey.shade600,
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  '(Dummy Map for LBS Feature)',
+                  style: TextStyle(color: Colors.grey.shade500, fontSize: 12),
                 ),
               ],
             ),
           ),
-        ),
 
-        // --- 2. Floating Header (Search) ---
-        Positioned(
-          top: 24,
-          left: 24,
-          right: 24,
-          child: Container(
-            padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
-            decoration: BoxDecoration(
-              color: AppColors.whiteCard,
-              borderRadius: BorderRadius.circular(16),
-              boxShadow: [
-                BoxShadow(
-                  color: Colors.black.withOpacity(0.05),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
+          // --- 2. SEARCH BAR ---
+          Positioned(
+            top: 24,
+            left: 24,
+            right: 24,
+            child: Container(
+              decoration: BoxDecoration(
+                color: Colors.white,
+                borderRadius: BorderRadius.circular(16),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withOpacity(0.05),
+                    blurRadius: 10,
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: TextField(
+                decoration: InputDecoration(
+                  hintText: 'Search nearby essentials...',
+                  hintStyle: const TextStyle(color: Colors.grey, fontSize: 14),
+                  prefixIcon: const Icon(
+                    Icons.search,
+                    color: AppColors.primaryBlue,
+                  ),
+                  border: InputBorder.none,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 16),
                 ),
-              ],
-            ),
-            child: const TextField(
-              decoration: InputDecoration(
-                hintText: 'Search nearby items...',
-                hintStyle: TextStyle(color: AppColors.textSecondary),
-                border: InputBorder.none,
-                icon: Icon(Icons.search, color: AppColors.primaryBlue),
               ),
             ),
           ),
-        ),
 
-        // --- 3. Floating Bottom Cards ---
-        Positioned(
-          bottom: 24,
-          left: 0,
-          right: 0,
-          child: SizedBox(
-            height: 160,
-            child: ListView(
-              scrollDirection: Axis.horizontal,
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              children: [
-                _buildMapItemCard(
-                  title: 'Laptop Bag',
-                  distance: '50m away',
-                  location: 'Campus Library',
-                  icon: Icons.backpack_outlined,
-                ),
-                const SizedBox(width: 16),
-                _buildMapItemCard(
-                  title: 'Water Bottle',
-                  distance: '120m away',
-                  location: 'Coffee Shop',
-                  icon: Icons.water_drop_outlined,
-                ),
-              ],
+          // --- 3. FLOATING CARDS (Sesuai Screenshot Lo) ---
+          Positioned(
+            bottom: 32,
+            left: 0,
+            right: 0,
+            child: SizedBox(
+              height: 120,
+              child: ListView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                physics: const BouncingScrollPhysics(),
+                children: [
+                  _buildMapCard(
+                    Icons.backpack_outlined,
+                    'Laptop Bag',
+                    'Campus Library',
+                    '50m away',
+                    AppColors.primaryBlue,
+                  ),
+                  const SizedBox(width: 16),
+                  _buildMapCard(
+                    Icons.water_drop_outlined,
+                    'Water Bottle',
+                    'Coffee Shop',
+                    '120m away',
+                    Colors.cyan,
+                  ),
+                  const SizedBox(width: 16),
+                  _buildMapCard(
+                    Icons.menu_book_rounded,
+                    'Notebook',
+                    'Bookstore',
+                    '250m away',
+                    AppColors.successGreen,
+                  ),
+                ],
+              ),
             ),
           ),
-        ),
-      ],
+        ],
+      ),
     );
   }
 
-  // --- Helper Widget Buat Floating Card ---
-  Widget _buildMapItemCard({
-    required String title,
-    required String distance,
-    required String location,
-    required IconData icon,
-  }) {
+  // Helper Custom Widget buat Card di atas peta
+  Widget _buildMapCard(
+    IconData icon,
+    String title,
+    String subtitle,
+    String distance,
+    Color color,
+  ) {
     return Container(
       width: 240,
       padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
-        color: AppColors.whiteCard,
+        color: Colors.white,
         borderRadius: BorderRadius.circular(16),
         boxShadow: [
           BoxShadow(
-            color: Colors.black.withOpacity(0.08),
-            blurRadius: 15,
-            offset: const Offset(0, 5),
+            color: Colors.black.withOpacity(0.05),
+            blurRadius: 10,
+            offset: const Offset(0, 4),
           ),
         ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
         children: [
           Row(
             children: [
               Container(
-                padding: const EdgeInsets.all(10),
+                padding: const EdgeInsets.all(8),
                 decoration: BoxDecoration(
-                  color: AppColors.primaryBlue.withOpacity(0.1),
-                  shape: BoxShape.circle,
+                  color: color.withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
                 ),
-                child: Icon(icon, color: AppColors.primaryBlue, size: 24),
+                child: Icon(icon, color: color),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: Text(
                   title,
-                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16, color: AppColors.textPrimary),
-                  maxLines: 1,
-                  overflow: TextOverflow.ellipsis,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: AppColors.textPrimary,
+                  ),
                 ),
               ),
             ],
           ),
           const Spacer(),
           Text(
-            location,
-            style: const TextStyle(fontSize: 13, color: AppColors.textSecondary),
+            subtitle,
+            style: const TextStyle(
+              color: AppColors.textSecondary,
+              fontSize: 12,
+            ),
           ),
           const SizedBox(height: 4),
           Row(
             children: [
-              const Icon(Icons.location_on, size: 14, color: AppColors.dangerRed),
+              const Icon(
+                Icons.location_on,
+                size: 14,
+                color: AppColors.dangerRed,
+              ),
               const SizedBox(width: 4),
               Text(
                 distance,
-                style: const TextStyle(fontSize: 13, fontWeight: FontWeight.bold, color: AppColors.dangerRed),
+                style: const TextStyle(
+                  color: AppColors.dangerRed,
+                  fontSize: 12,
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ],
           ),

@@ -1,8 +1,17 @@
 import 'package:flutter/material.dart';
 import '../theme/colors.dart';
 
-class RegisterScreen extends StatelessWidget {
+// 1. Ubah jadi StatefulWidget biar bisa nyimpen state mata
+class RegisterScreen extends StatefulWidget {
   const RegisterScreen({super.key});
+
+  @override
+  State<RegisterScreen> createState() => _RegisterScreenState();
+}
+
+class _RegisterScreenState extends State<RegisterScreen> {
+  // 2. Bikin variabel buat nentuin password lagi hide atau show
+  bool _obscurePassword = true; 
 
   @override
   Widget build(BuildContext context) {
@@ -75,10 +84,25 @@ class RegisterScreen extends StatelessWidget {
               const Text('Password', style: TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
               TextField(
-                obscureText: true,
+                obscureText: _obscurePassword, // 3. Panggil variabel statenya di sini
                 decoration: InputDecoration(
                   hintText: '••••••••',
                   prefixIcon: const Icon(Icons.lock_outline, color: AppColors.textSecondary),
+                  
+                  // 4. Tambahin suffix icon yang bisa dipencet (mata)
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      _obscurePassword ? Icons.visibility_off_outlined : Icons.visibility_outlined,
+                      color: AppColors.textSecondary,
+                    ),
+                    onPressed: () {
+                      // 5. Logic ganti state pas dipencet
+                      setState(() {
+                        _obscurePassword = !_obscurePassword;
+                      });
+                    },
+                  ),
+                  
                   filled: true,
                   fillColor: AppColors.textSecondary.withOpacity(0.1),
                   border: OutlineInputBorder(
@@ -92,7 +116,11 @@ class RegisterScreen extends StatelessWidget {
               // Register Button
               ElevatedButton(
                 onPressed: () {
-                  // Nanti balik ke login atau langsung masuk home
+                  // Kasih notif sukses terus lempar balik ke login
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Account successfully created! 🎉')),
+                  );
+                  Navigator.pop(context);
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primaryBlue,

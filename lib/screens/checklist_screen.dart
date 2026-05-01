@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
+import 'package:google_generative_ai/google_generative_ai.dart';
+import 'package:sensors_plus/sensors_plus.dart';
+import 'dart:async';
 import '../theme/colors.dart';
-import 'ready_to_go_screen.dart';
 
 class ChecklistScreen extends StatefulWidget {
   const ChecklistScreen({super.key});
@@ -10,221 +12,186 @@ class ChecklistScreen extends StatefulWidget {
 }
 
 class _ChecklistScreenState extends State<ChecklistScreen> {
-  // Data bohongan buat nyimpen status checklist
-  final Map<String, bool> _items = {
-    'Wallet': true, // Dibuat true dari awal biar kelihatan versi checked-nya
-    'Phone': false,
-    'Charger': false,
-    'Keys': false,
-  };
+  // --- 1. State Variables ---
+  bool _isLoadingAi = true;
+  String _aiSuggestion = "Thinking...";
+  
+  // Daftar barang bawaan (Sesuai Konsep Lo)
+  final List<Map<String, dynamic>> _essentials = [
+    {'name': 'Dompet', 'isChecked': false},
+    {'name': 'Handphone', 'isChecked': false},
+    {'name': 'Kunci Motor/Kost', 'isChecked': false},
+    {'name': 'Charger', 'isChecked': false},
+  ];
+
+  // Sensor State
+  StreamSubscription<AccelerometerEvent>? _accelSub;
+  bool _isWarningActive = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _getAiSuggestion(); // Panggil AI pas buka halaman
+    _initAccelerometer(); // Aktifin sensor penjaga
+  }
+
+  // --- 2. Logic AI (Gemini) ---
+  Future<void> _getAiSuggestion() async {
+    try {
+      // API Key lo masukin sini bre
+      final model = GenerativeModel(model: 'gemini-1.5-flash', apiKey: 'ISI_API_KEY_LO_DI_SINI');
+      
+      // Data LBS & Waktu (Simulation)
+      final now = DateTime.now();
+      final location = "Mertoyudan, Magelang"; // Dummy LBS
+      
+      final prompt = "User mau keluar jam ${now.hour}:${now.minute} di lokasi $location. Berikan saran 1-2 barang esensial tambahan yang unik selain Dompet, HP, Kunci. Jawab sangat singkat (max 10 kata).";
+      
+      final content = [Content.text(prompt)];
+      final response = await model.generateContent(content);
+
+      setState(() {
+        _aiSuggestion = response.text ?? "Jangan lupa bawa semangat!";
+        _isLoadingAi = false;
+      });
+    } catch (e) {
+      setState(() {
+        _aiSuggestion = "Cek lagi perlengkapan musim ini ya!";
+        _isLoadingAi = false;
+      });
+    }
+  }
+
+  // --- 3. Logic Sensor (Accelerometer) ---
+  void _initAccelerometer() {
+    _accelSub = accelerometerEventStream().listen((AccelerometerEvent event) {
+      // Kalo HP gerak kenceng (Z axis atau X/Y kenceng)
+      if (event.x.abs() > 12 || event.y.abs() > 12) {
+        _checkIfReadyToGo();
+      }
+    });
+  }
+
+  void _checkIfReadyToGo() {
+    bool allChecked = _essentials.every((item) => item['isChecked']);
+    
+    // Kalo belum lengkap tapi udah gerak, kasih warning!
+    if (!allChecked && !_isWarningActive) {
+      _isWarningActive = true;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('EITS! Barang belum lengkap, jangan jalan dulu! 🛑', 
+            textAlign: TextAlign.center, 
+            style: TextStyle(fontWeight: FontWeight.bold)
+          ),
+          backgroundColor: AppColors.dangerRed,
+          duration: Duration(seconds: 2),
+        ),
+      ).closed.then((_) => _isWarningActive = false);
+    }
+  }
+
+  @override
+  void dispose() {
+    _accelSub?.cancel();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
+    bool allChecked = _essentials.every((item) => item['isChecked']);
+
     return Scaffold(
       backgroundColor: AppColors.background,
       appBar: AppBar(
-        backgroundColor: Colors.transparent,
+        title: const Text('Prevention Mode', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
+        backgroundColor: Colors.white,
         elevation: 0,
+        centerTitle: true,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: AppColors.primaryBlue),
+          icon: const Icon(Icons.close, color: Colors.grey),
           onPressed: () => Navigator.pop(context),
         ),
-        actions: [
-          IconButton(
-            icon: const Icon(
-              Icons.notifications_none,
-              color: AppColors.primaryBlue,
-            ),
-            onPressed: () {},
-          ),
-        ],
       ),
-      body: SafeArea(
-        child: SingleChildScrollView(
-          padding: const EdgeInsets.symmetric(horizontal: 24.0),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // Header
-              const Text(
-                'Checklist Before You Go',
-                style: TextStyle(
-                  fontSize: 28,
-                  fontWeight: FontWeight.bold,
-                  color: AppColors.textPrimary,
-                ),
-              ),
-              const SizedBox(height: 8),
-              const Text(
-                'Tap items as you pack them to ensure nothing is left behind.',
-                style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
-              ),
-              const SizedBox(height: 32),
-
-              // Checklist Items
-              ..._items.entries
-                  .map((entry) => _buildChecklistItem(entry.key, entry.value))
-                  .toList(),
-
-              const SizedBox(height: 32),
-
-              // Smart Suggestions Section
-              Row(
-                children: [
-                  const Icon(
-                    Icons.stars_rounded,
-                    color: Color(0xFFD97706),
-                    size: 20,
-                  ), // Warna orange/gold
-                  const SizedBox(width: 8),
-                  const Text(
-                    'Smart Suggestions',
-                    style: TextStyle(
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFFD97706),
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-
-              // Suggestions Cards
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildSuggestionCard(
-                      title: "Don't forget your campus card",
-                      subtitle: "Required for building access today.",
-                      icon: Icons.badge_outlined,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildSuggestionCard(
-                      title: "Bring a jacket",
-                      subtitle: "Temperatures expected to drop by evening.",
-                      icon: Icons.cloud_outlined,
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 40), // Spacing buat scroll
-            ],
-          ),
-        ),
-      ),
-
-      // Bottom Button
-      bottomNavigationBar: Container(
-        padding: const EdgeInsets.all(24.0),
-        decoration: BoxDecoration(color: AppColors.background),
-        child: ElevatedButton(
-          onPressed: () {
-            Navigator.push(
-              context,
-              MaterialPageRoute(builder: (context) => const ReadyToGoScreen()),
-            );
-          },
-          style: ElevatedButton.styleFrom(
-            backgroundColor: AppColors.primaryBlue,
-            padding: const EdgeInsets.symmetric(vertical: 16),
-            shape: RoundedRectangleBorder(
-              borderRadius: BorderRadius.circular(12),
-            ),
-          ),
-          child: const Text(
-            'Confirm Ready',
-            style: TextStyle(
-              fontSize: 16,
-              color: Colors.white,
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  // --- Helper Widgets ---
-
-  // Widget buat bikin kotak checklist-nya
-  Widget _buildChecklistItem(String title, bool isChecked) {
-    return GestureDetector(
-      onTap: () {
-        setState(() {
-          _items[title] = !_items[title]!; // Toggle status true/false
-        });
-      },
-      child: Container(
-        margin: const EdgeInsets.only(bottom: 12),
-        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-        decoration: BoxDecoration(
-          // Kalau checked warnanya ijo tipis, kalau nggak putih biasa
-          color: isChecked
-              ? AppColors.successGreen.withOpacity(0.1)
-              : AppColors.whiteCard,
-          borderRadius: BorderRadius.circular(12),
-          border: Border.all(
-            color: isChecked
-                ? AppColors.successGreen.withOpacity(0.3)
-                : Colors.grey.withOpacity(0.2),
-          ),
-        ),
-        child: Row(
-          children: [
-            Icon(
-              isChecked ? Icons.check_circle : Icons.radio_button_unchecked,
-              color: isChecked
-                  ? AppColors.successGreen
-                  : AppColors.textSecondary,
-              size: 28,
-            ),
-            const SizedBox(width: 16),
-            Text(
-              title,
-              style: TextStyle(
-                fontSize: 16,
-                fontWeight: isChecked ? FontWeight.w600 : FontWeight.normal,
-                color: AppColors.textPrimary,
-              ),
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-
-  // Widget buat kotak Smart Suggestions
-  Widget _buildSuggestionCard({
-    required String title,
-    required String subtitle,
-    required IconData icon,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: Colors.grey.withOpacity(0.08),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      body: Column(
         children: [
-          Icon(icon, color: AppColors.primaryBlue, size: 24),
-          const SizedBox(height: 12),
-          Text(
-            title,
-            style: const TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 13,
-              color: AppColors.textPrimary,
+          // --- AI Suggestion Card ---
+          Container(
+            width: double.infinity,
+            margin: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(colors: [AppColors.primaryBlue, Colors.blue.shade300]),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [BoxShadow(color: AppColors.primaryBlue.withOpacity(0.3), blurRadius: 10)],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.auto_awesome, color: Colors.white, size: 20),
+                    const SizedBox(width: 8),
+                    const Text('AI SMART SUGGESTION', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold)),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                _isLoadingAi 
+                  ? const LinearProgressIndicator(color: Colors.white, backgroundColor: Colors.white24)
+                  : Text(_aiSuggestion, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600)),
+              ],
             ),
           ),
-          const SizedBox(height: 4),
-          Text(
-            subtitle,
-            style: const TextStyle(
-              fontSize: 11,
-              color: AppColors.textSecondary,
+
+          // --- Checklist Section ---
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              itemCount: _essentials.length,
+              itemBuilder: (context, index) {
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(15),
+                  ),
+                  child: CheckboxListTile(
+                    title: Text(_essentials[index]['name'], style: const TextStyle(fontWeight: FontWeight.w500)),
+                    value: _essentials[index]['isChecked'],
+                    activeColor: AppColors.primaryBlue,
+                    checkboxShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
+                    onChanged: (val) {
+                      setState(() {
+                        _essentials[index]['isChecked'] = val!;
+                      });
+                    },
+                  ),
+                );
+              },
+            ),
+          ),
+
+          // --- Confirm Button ---
+          Padding(
+            padding: const EdgeInsets.all(24.0),
+            child: SizedBox(
+              width: double.infinity,
+              height: 55,
+              child: ElevatedButton(
+                onPressed: allChecked ? () {
+                  // Logika nyatet ke history
+                  Navigator.pop(context);
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Selamat jalan! Semua aman dibawa. ✅'), backgroundColor: AppColors.successGreen),
+                  );
+                } : null, // Disable kalo belum lengkap
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppColors.primaryBlue,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                  elevation: 0,
+                ),
+                child: const Text('Confirm & Go', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+              ),
             ),
           ),
         ],

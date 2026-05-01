@@ -2,9 +2,14 @@ import 'package:flutter/material.dart';
 import '../theme/colors.dart';
 import 'checklist_screen.dart';
 import 'find_item_screen.dart';
+import 'mini_game_screen.dart';
+import 'history_page.dart';
+import 'nearby_page.dart';
 
 class HomeScreen extends StatelessWidget {
-  const HomeScreen({super.key});
+  final Function(int)? onNavigate;
+
+  const HomeScreen({super.key, this.onNavigate});
 
   @override
   Widget build(BuildContext context) {
@@ -102,7 +107,11 @@ class HomeScreen extends StatelessWidget {
                 child: _buildSmallActionCard(
                   title: "History",
                   icon: Icons.history,
-                  onTap: () {},
+                  onTap: () {
+                    if (onNavigate != null) {
+                      onNavigate!(1); // Index 1 itu Tab History
+                    }
+                  },
                 ),
               ),
               const SizedBox(width: 16),
@@ -110,7 +119,11 @@ class HomeScreen extends StatelessWidget {
                 child: _buildSmallActionCard(
                   title: "Nearby Locations",
                   icon: Icons.near_me_outlined,
-                  onTap: () {},
+                  onTap: () {
+                    if (onNavigate != null) {
+                      onNavigate!(2); // Index 1 itu Tab History
+                    }
+                  },
                 ),
               ),
             ],
@@ -119,7 +132,12 @@ class HomeScreen extends StatelessWidget {
 
           // Mini Game Banner
           GestureDetector(
-            onTap: () {},
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (context) => const MiniGameScreen()),
+              );
+            },
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(

@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import '../theme/colors.dart';
+import 'login_screen.dart';
 
 class ProfilePage extends StatelessWidget {
   const ProfilePage({super.key});
@@ -66,8 +67,11 @@ class ProfilePage extends StatelessWidget {
             width: double.infinity,
             child: OutlinedButton.icon(
               onPressed: () {
-                // Nanti kita arahin balik ke Login Screen
-                print("Logout dipencet!");
+                Navigator.pushAndRemoveUntil(
+                  context,
+                  MaterialPageRoute(builder: (context) => const LoginScreen()),
+                  (Route<dynamic> route) => false,
+                );
               },
               icon: const Icon(Icons.logout, color: AppColors.dangerRed),
               label: const Text('Log Out', style: TextStyle(color: AppColors.dangerRed, fontWeight: FontWeight.bold)),
