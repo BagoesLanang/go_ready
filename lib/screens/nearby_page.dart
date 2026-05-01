@@ -14,7 +14,7 @@ class NearbyPage extends StatefulWidget {
 class _NearbyPageState extends State<NearbyPage> {
   final List<String> _categories = ['Rumah', 'Kampus', 'Minimarket', 'ATM'];
   String _selectedCategory = 'Kampus';
-  
+
   // Controller buat ngegerakin peta
   final MapController _mapController = MapController();
 
@@ -30,7 +30,7 @@ class _NearbyPageState extends State<NearbyPage> {
       'status': 'Current Location',
       'icon': Icons.home_rounded,
       'color': Colors.blue,
-      'coords': const LatLng(-7.7810, 110.4135), 
+      'coords': const LatLng(-7.7810, 110.4135),
     },
     'Kampus': {
       'name': 'UPN Kampus 2 Babarsari',
@@ -39,7 +39,7 @@ class _NearbyPageState extends State<NearbyPage> {
       'status': 'Open • Closes 21:00',
       'icon': Icons.school_rounded,
       'color': AppColors.primaryBlue,
-      'coords': const LatLng(-7.7795, 110.4148), 
+      'coords': const LatLng(-7.7795, 110.4148),
     },
     'Minimarket': {
       'name': 'Indomaret Babarsari',
@@ -77,7 +77,7 @@ class _NearbyPageState extends State<NearbyPage> {
       permission = await Geolocator.requestPermission();
       if (permission == LocationPermission.denied) return;
     }
-    
+
     if (permission == LocationPermission.deniedForever) return;
 
     Position position = await Geolocator.getCurrentPosition();
@@ -86,7 +86,7 @@ class _NearbyPageState extends State<NearbyPage> {
       // Update titik Rumah lu jadi titik GPS asli biar real-time
       _locationData['Rumah']!['coords'] = _userLocation;
     });
-    
+
     _mapController.move(_userLocation, 16.0);
   }
 
@@ -102,7 +102,7 @@ class _NearbyPageState extends State<NearbyPage> {
           FlutterMap(
             mapController: _mapController,
             options: MapOptions(
-              initialCenter: currentData['coords'], 
+              initialCenter: currentData['coords'],
               initialZoom: 16.0,
             ),
             children: [
@@ -124,7 +124,13 @@ class _NearbyPageState extends State<NearbyPage> {
                         data['icon'],
                         color: data['color'],
                         size: isSelected ? 50 : 30,
-                        shadows: const [Shadow(color: Colors.black45, blurRadius: 10, offset: Offset(0, 4))],
+                        shadows: const [
+                          Shadow(
+                            color: Colors.black45,
+                            blurRadius: 10,
+                            offset: Offset(0, 4),
+                          ),
+                        ],
                       ),
                     ),
                   );
@@ -138,13 +144,26 @@ class _NearbyPageState extends State<NearbyPage> {
             child: Column(
               children: [
                 Padding(
-                  padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16.0,
+                    vertical: 8.0,
+                  ),
                   child: Row(
                     children: [
                       Container(
-                        decoration: const BoxDecoration(color: Colors.white, shape: BoxShape.circle, boxShadow: [BoxShadow(color: Colors.black12, blurRadius: 8)]),
+                        decoration: const BoxDecoration(
+                          color: Colors.white,
+                          shape: BoxShape.circle,
+                          boxShadow: [
+                            BoxShadow(color: Colors.black12, blurRadius: 8),
+                          ],
+                        ),
                         child: IconButton(
-                          icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.primaryBlue, size: 20),
+                          icon: const Icon(
+                            Icons.arrow_back_ios_new,
+                            color: AppColors.primaryBlue,
+                            size: 20,
+                          ),
                           onPressed: () {
                             if (Navigator.canPop(context)) {
                               Navigator.pop(context);
@@ -155,13 +174,28 @@ class _NearbyPageState extends State<NearbyPage> {
                       const SizedBox(width: 12),
                       Expanded(
                         child: Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(24), boxShadow: const [BoxShadow(color: Colors.black12, blurRadius: 8)]),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 16,
+                            vertical: 12,
+                          ),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(24),
+                            boxShadow: const [
+                              BoxShadow(color: Colors.black12, blurRadius: 8),
+                            ],
+                          ),
                           child: const Row(
                             children: [
                               Icon(Icons.search, color: Colors.grey, size: 20),
                               SizedBox(width: 8),
-                              Text('Search nearby places...', style: TextStyle(color: Colors.grey, fontSize: 14)),
+                              Text(
+                                'Search nearby places...',
+                                style: TextStyle(
+                                  color: Colors.grey,
+                                  fontSize: 14,
+                                ),
+                              ),
                             ],
                           ),
                         ),
@@ -172,7 +206,7 @@ class _NearbyPageState extends State<NearbyPage> {
 
                 const SizedBox(height: 12),
 
-                // Kategori Filter 
+                // Kategori Filter
                 SizedBox(
                   height: 40,
                   child: ListView.builder(
@@ -182,32 +216,49 @@ class _NearbyPageState extends State<NearbyPage> {
                     itemBuilder: (context, index) {
                       final category = _categories[index];
                       final isSelected = _selectedCategory == category;
-                      
+
                       return GestureDetector(
                         onTap: () {
                           setState(() {
                             _selectedCategory = category;
                             // Peta otomatis geser ke titik Babarsari yang diklik
-                            _mapController.move(_locationData[category]!['coords'], 17.0);
+                            _mapController.move(
+                              _locationData[category]!['coords'],
+                              17.0,
+                            );
                           });
                         },
                         child: AnimatedContainer(
                           duration: const Duration(milliseconds: 200),
                           margin: const EdgeInsets.only(right: 12),
-                          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                          padding: const EdgeInsets.symmetric(
+                            horizontal: 20,
+                            vertical: 8,
+                          ),
                           decoration: BoxDecoration(
-                            color: isSelected ? AppColors.primaryBlue : Colors.white,
+                            color: isSelected
+                                ? AppColors.primaryBlue
+                                : Colors.white,
                             borderRadius: BorderRadius.circular(20),
                             boxShadow: [
-                              if (isSelected) BoxShadow(color: AppColors.primaryBlue.withOpacity(0.3), blurRadius: 8, offset: const Offset(0, 4))
+                              if (isSelected)
+                                BoxShadow(
+                                  color: AppColors.primaryBlue.withOpacity(0.3),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4),
+                                ),
                             ],
                           ),
                           child: Center(
                             child: Text(
                               category,
                               style: TextStyle(
-                                color: isSelected ? Colors.white : AppColors.textPrimary,
-                                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                                color: isSelected
+                                    ? Colors.white
+                                    : AppColors.textPrimary,
+                                fontWeight: isSelected
+                                    ? FontWeight.bold
+                                    : FontWeight.w500,
                               ),
                             ),
                           ),
@@ -227,7 +278,10 @@ class _NearbyPageState extends State<NearbyPage> {
               duration: const Duration(milliseconds: 300),
               transitionBuilder: (Widget child, Animation<double> animation) {
                 return SlideTransition(
-                  position: Tween<Offset>(begin: const Offset(0, 1), end: Offset.zero).animate(animation),
+                  position: Tween<Offset>(
+                    begin: const Offset(0, 1),
+                    end: Offset.zero,
+                  ).animate(animation),
                   child: child,
                 );
               },
@@ -238,7 +292,13 @@ class _NearbyPageState extends State<NearbyPage> {
                 decoration: BoxDecoration(
                   color: Colors.white,
                   borderRadius: BorderRadius.circular(24),
-                  boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.1), blurRadius: 20, offset: const Offset(0, -5))],
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withOpacity(0.1),
+                      blurRadius: 20,
+                      offset: const Offset(0, -5),
+                    ),
+                  ],
                 ),
                 child: Column(
                   mainAxisSize: MainAxisSize.min,
@@ -249,27 +309,78 @@ class _NearbyPageState extends State<NearbyPage> {
                       children: [
                         Container(
                           padding: const EdgeInsets.all(12),
-                          decoration: BoxDecoration(color: currentData['color'].withOpacity(0.1), borderRadius: BorderRadius.circular(16)),
-                          child: Icon(currentData['icon'], color: currentData['color'], size: 32),
+                          decoration: BoxDecoration(
+                            color: currentData['color'].withOpacity(0.1),
+                            borderRadius: BorderRadius.circular(16),
+                          ),
+                          child: Icon(
+                            currentData['icon'],
+                            color: currentData['color'],
+                            size: 32,
+                          ),
                         ),
                         const SizedBox(width: 16),
                         Expanded(
                           child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              Text(currentData['name'], style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+                              Text(
+                                currentData['name'],
+                                style: const TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppColors.textPrimary,
+                                ),
+                              ),
                               const SizedBox(height: 4),
-                              Text(currentData['address'], style: const TextStyle(color: AppColors.textSecondary, fontSize: 13), maxLines: 1, overflow: TextOverflow.ellipsis),
+                              Text(
+                                currentData['address'],
+                                style: const TextStyle(
+                                  color: AppColors.textSecondary,
+                                  fontSize: 13,
+                                ),
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                              ),
                               const SizedBox(height: 8),
                               Row(
                                 children: [
-                                  const Icon(Icons.directions_walk, size: 14, color: AppColors.primaryBlue),
+                                  const Icon(
+                                    Icons.directions_walk,
+                                    size: 14,
+                                    color: AppColors.primaryBlue,
+                                  ),
                                   const SizedBox(width: 4),
-                                  Text(currentData['distance'], style: const TextStyle(color: AppColors.primaryBlue, fontWeight: FontWeight.w600, fontSize: 13)),
+                                  Text(
+                                    currentData['distance'],
+                                    style: const TextStyle(
+                                      color: AppColors.primaryBlue,
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13,
+                                    ),
+                                  ),
                                   const SizedBox(width: 12),
-                                  Icon(Icons.circle, size: 6, color: currentData['status'] == 'Available' || currentData['status'].contains('Open') || currentData['status'] == 'Current Location' ? AppColors.successGreen : AppColors.dangerRed),
+                                  Icon(
+                                    Icons.circle,
+                                    size: 6,
+                                    color:
+                                        currentData['status'] == 'Available' ||
+                                            currentData['status'].contains(
+                                              'Open',
+                                            ) ||
+                                            currentData['status'] ==
+                                                'Current Location'
+                                        ? AppColors.successGreen
+                                        : AppColors.dangerRed,
+                                  ),
                                   const SizedBox(width: 4),
-                                  Text(currentData['status'], style: const TextStyle(color: AppColors.textSecondary, fontSize: 13)),
+                                  Text(
+                                    currentData['status'],
+                                    style: const TextStyle(
+                                      color: AppColors.textSecondary,
+                                      fontSize: 13,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ],
@@ -286,7 +397,9 @@ class _NearbyPageState extends State<NearbyPage> {
                           _checkLocationPermission();
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
-                              content: const Text('Updating location via GPS...'), 
+                              content: const Text(
+                                'Updating location via GPS...',
+                              ),
                               backgroundColor: AppColors.primaryBlue,
                               behavior: SnackBarBehavior.floating,
                             ),
@@ -294,10 +407,19 @@ class _NearbyPageState extends State<NearbyPage> {
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: AppColors.primaryBlue,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(16),
+                          ),
                           elevation: 0,
                         ),
-                        child: const Text('Update My Location', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                        child: const Text(
+                          'Update My Location',
+                          style: TextStyle(
+                            fontSize: 16,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
                       ),
                     ),
                   ],

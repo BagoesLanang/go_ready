@@ -1,9 +1,21 @@
 import 'package:flutter/material.dart';
 import '../theme/colors.dart';
 import 'login_screen.dart';
+import 'edit_profile.dart';
+import 'biometric_setup.dart';
 
-class ProfilePage extends StatelessWidget {
+class ProfilePage extends StatefulWidget {
   const ProfilePage({super.key});
+
+  @override
+  State<ProfilePage> createState() => _ProfilePageState();
+}
+
+class _ProfilePageState extends State<ProfilePage> {
+  // --- STATE VARIABLE (Awalnya Dira, ntar bisa berubah pas di-save) ---
+  String _userName = 'Dira';
+  String _userUniv = 'UPN Veteran Yogyakarta';
+  String _userBio = 'CS Student | Musician 🎸 | Skater 🛹';
 
   @override
   Widget build(BuildContext context) {
@@ -13,7 +25,7 @@ class ProfilePage extends StatelessWidget {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           const SizedBox(height: 24),
-          // --- Profile Picture Section ---
+
           Stack(
             children: [
               Container(
@@ -23,46 +35,100 @@ class ProfilePage extends StatelessWidget {
                   shape: BoxShape.circle,
                   color: AppColors.primaryBlue.withOpacity(0.1),
                   border: Border.all(color: AppColors.primaryBlue, width: 2),
-                ),
-                child: const Icon(Icons.person, size: 64, color: AppColors.primaryBlue),
-              ),
-              Positioned(
-                bottom: 0,
-                right: 0,
-                child: Container(
-                  padding: const EdgeInsets.all(10),
-                  decoration: const BoxDecoration(
-                    color: AppColors.primaryBlue,
-                    shape: BoxShape.circle,
+                  image: const DecorationImage(
+                    image: AssetImage('assets/images/logofix.png'),
+                    fit: BoxFit.cover,
                   ),
-                  child: const Icon(Icons.edit, size: 20, color: Colors.white),
                 ),
               ),
+              // Positioned(
+              //   bottom: 0,
+              //   right: 0,
+              //   child: Container(
+              //     padding: const EdgeInsets.all(10),
+              //     decoration: const BoxDecoration(
+              //       color: AppColors.primaryBlue,
+              //       shape: BoxShape.circle,
+              //     ),
+              //     child: const Icon(Icons.edit, size: 20, color: Colors.white),
+              //   ),
+              // ),
             ],
           ),
           const SizedBox(height: 24),
-          
-          // --- Name & Bio ---
-          const Text(
-            'John Doe', 
-            style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+
+          // --- NAMA & BIO YANG BISA BERUBAH ---
+          Text(
+            _userName,
+            style: const TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: AppColors.textPrimary,
+            ),
           ),
           const SizedBox(height: 8),
-          const Text(
-            'CS Student | Musician 🎸 | Skater 🛹',
-            style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
+          Text(
+            '$_userUniv\n$_userBio',
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 14,
+              color: AppColors.textSecondary,
+              height: 1.5,
+            ),
           ),
           const SizedBox(height: 40),
 
-          // --- Menu Settings ---
-          _buildProfileMenu(icon: Icons.person_outline, title: 'Account Details', onTap: () {}),
-          _buildProfileMenu(icon: Icons.notifications_none, title: 'Notifications', onTap: () {}),
-          _buildProfileMenu(icon: Icons.security, title: 'Privacy & Security', onTap: () {}),
-          _buildProfileMenu(icon: Icons.help_outline, title: 'Help & Support', onTap: () {}),
-          
+          _buildProfileMenu(
+            icon: Icons.person_outline,
+            title: 'Edit Profile',
+            onTap: () async {
+              // Tungguin data dari halaman Edit Profile
+              final result = await Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => EditProfilePage(
+                    currentName: _userName,
+                    currentUniv: _userUniv,
+                    currentBio: _userBio,
+                  ),
+                ),
+              );
+
+              // Kalo tombol save dipencet (result ngga null), langsung update UI!
+              if (result != null) {
+                setState(() {
+                  _userName = result['name'];
+                  _userUniv = result['univ'];
+                  _userBio = result['bio'];
+                });
+
+                // Munculin alert sukses
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(
+                    content: Text('Profile updated successfully!'),
+                    backgroundColor: AppColors.successGreen,
+                    behavior: SnackBarBehavior.floating,
+                  ),
+                );
+              }
+            },
+          ),
+
+          _buildProfileMenu(
+            icon: Icons.fingerprint,
+            title: 'Biometric Login Setup',
+            onTap: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (context) => const BiometricSetupPage(),
+                ),
+              );
+            },
+          ),
+
           const SizedBox(height: 32),
-          
-          // --- Logout Button ---
+
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
@@ -74,28 +140,39 @@ class ProfilePage extends StatelessWidget {
                 );
               },
               icon: const Icon(Icons.logout, color: AppColors.dangerRed),
-              label: const Text('Log Out', style: TextStyle(color: AppColors.dangerRed, fontWeight: FontWeight.bold)),
+              label: const Text(
+                'Log Out',
+                style: TextStyle(
+                  color: AppColors.dangerRed,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 side: const BorderSide(color: AppColors.dangerRed),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
               ),
             ),
           ),
-          const SizedBox(height: 24), // Spacing bawah
+          const SizedBox(height: 24),
         ],
       ),
     );
   }
 
-  // --- Helper Widget Buat Menu List ---
-  Widget _buildProfileMenu({required IconData icon, required String title, required VoidCallback onTap}) {
+  Widget _buildProfileMenu({
+    required IconData icon,
+    required String title,
+    required VoidCallback onTap,
+  }) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       child: ListTile(
         onTap: onTap,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-        tileColor: AppColors.whiteCard,
+        tileColor: Colors.white,
         leading: Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
@@ -104,8 +181,18 @@ class ProfilePage extends StatelessWidget {
           ),
           child: Icon(icon, color: AppColors.primaryBlue),
         ),
-        title: Text(title, style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary)),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.textSecondary),
+        title: Text(
+          title,
+          style: const TextStyle(
+            fontWeight: FontWeight.w600,
+            color: AppColors.textPrimary,
+          ),
+        ),
+        trailing: const Icon(
+          Icons.arrow_forward_ios,
+          size: 16,
+          color: AppColors.textSecondary,
+        ),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       ),
     );
