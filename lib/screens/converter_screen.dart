@@ -1,221 +1,403 @@
 import 'package:flutter/material.dart';
+import 'dart:async';
+import 'package:intl/intl.dart';
 import '../theme/colors.dart';
 
-class ConverterScreen extends StatefulWidget {
+class ConverterScreen extends StatelessWidget {
   const ConverterScreen({super.key});
 
   @override
-  State<ConverterScreen> createState() => _ConverterScreenState();
+  Widget build(BuildContext context) {
+    // DefaultTabController bikin gampang urusan swipe tab
+    return DefaultTabController(
+      length: 2,
+      child: Scaffold(
+        backgroundColor: const Color(0xFFF8F9FA),
+        appBar: AppBar(
+          backgroundColor: Colors.white,
+          elevation: 0,
+          centerTitle: true,
+          title: const Text(
+            'GoReady',
+            style: TextStyle(
+              color: AppColors.primaryBlue,
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+            ),
+          ),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back, color: Colors.grey),
+            onPressed: () => Navigator.pop(context),
+          ),
+          bottom: const TabBar(
+            labelColor: AppColors.primaryBlue,
+            unselectedLabelColor: Colors.grey,
+            indicatorColor: AppColors.primaryBlue,
+            indicatorWeight: 3,
+            tabs: [
+              Tab(icon: Icon(Icons.currency_exchange), text: 'Currency'),
+              Tab(icon: Icon(Icons.schedule), text: 'Time Zones'),
+            ],
+          ),
+        ),
+        body: const TabBarView(children: [_CurrencyTab(), _TimeTab()]),
+      ),
+    );
+  }
 }
 
-class _ConverterScreenState extends State<ConverterScreen> {
-  // Data State buat Dropdown
-  String _fromCurrency = 'USD';
-  String _toCurrency = 'IDR';
-  final List<String> _currencies = ['USD', 'IDR', 'EUR', 'JPY'];
+// ==========================================
+// TAB 1: CURRENCY CONVERTER
+// ==========================================
+class _CurrencyTab extends StatefulWidget {
+  const _CurrencyTab();
+
+  @override
+  State<_CurrencyTab> createState() => _CurrencyTabState();
+}
+
+class _CurrencyTabState extends State<_CurrencyTab> {
+  final TextEditingController _amountController = TextEditingController();
+  String _fromCurrency = 'IDR';
+  String _toCurrency = 'USD';
+  double _result = 0.0;
+
+  // Dummy exchange rates (Base: IDR)
+  final Map<String, double> _rates = {
+    'IDR': 1.0,
+    'USD': 16000.0, // 1 USD = 16.000 IDR
+    'JPY': 105.0, // 1 JPY = 105 IDR
+  };
+
+  void _convert() {
+    double amount = double.tryParse(_amountController.text) ?? 0.0;
+    if (amount == 0.0) {
+      setState(() => _result = 0.0);
+      return;
+    }
+
+    // Logic: Convert ke IDR dulu, baru convert ke target mata uang
+    double baseToIdr = amount * _rates[_fromCurrency]!;
+    double finalResult = baseToIdr / _rates[_toCurrency]!;
+
+    setState(() {
+      _result = finalResult;
+    });
+  }
+
+  void _swapCurrencies() {
+    setState(() {
+      String temp = _fromCurrency;
+      _fromCurrency = _toCurrency;
+      _toCurrency = temp;
+      _convert(); // Re-calculate setelah di-swap
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: AppColors.background,
-      appBar: _buildCustomAppBar(context),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            const Text('Converter', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-            const SizedBox(height: 24),
-            
-            // Toggle Currency / Time
-            Container(
-              decoration: BoxDecoration(color: Colors.grey.shade200, borderRadius: BorderRadius.circular(24)),
-              child: Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.symmetric(vertical: 12),
-                      decoration: BoxDecoration(color: const Color(0xFF0056D2), borderRadius: BorderRadius.circular(24)),
-                      child: const Center(child: Text('Currency', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
-                    ),
-                  ),
-                  Expanded(
-                    child: GestureDetector(
-                      onTap: () {
-                         ScaffoldMessenger.of(context).showSnackBar(
-                           const SnackBar(content: Text('Time converter logic coming soon!')),
-                         );
-                      },
-                      child: const Center(child: Text('Time', style: TextStyle(color: AppColors.textSecondary, fontWeight: FontWeight.w600))),
-                    ),
-                  ),
-                ],
-              ),
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24.0),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Text(
+            'Currency Converter',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
             ),
-            const SizedBox(height: 32),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'Check the latest exchange rates for your trip.',
+            style: TextStyle(fontSize: 14, color: Colors.grey),
+          ),
+          const SizedBox(height: 32),
 
-            // Conversion Box
-            Container(
-              padding: const EdgeInsets.all(24),
-              decoration: BoxDecoration(
-                color: AppColors.whiteCard,
+          // Input Amount
+          TextField(
+            controller: _amountController,
+            keyboardType: TextInputType.number,
+            onChanged: (val) => _convert(),
+            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+            decoration: InputDecoration(
+              labelText: 'Amount',
+              filled: true,
+              fillColor: Colors.white,
+              border: OutlineInputBorder(
                 borderRadius: BorderRadius.circular(16),
-                boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.02), blurRadius: 10, offset: const Offset(0, 4))],
+                borderSide: BorderSide.none,
               ),
-              child: Column(
-                children: [
-                  Stack(
-                    alignment: Alignment.center,
-                    children: [
-                      Column(
-                        children: [
-                          _buildInteractiveInputBox('Amount to convert', '1000', _fromCurrency, const Color(0xFFF4F5F7), AppColors.textPrimary, true),
-                          const SizedBox(height: 8),
-                          _buildInteractiveInputBox('Converted amount', '15,243,500.00', _toCurrency, const Color(0xFFF0F5FE), const Color(0xFF0056D2), false),
-                        ],
-                      ),
-                      // Swap Button
-                      GestureDetector(
-                        onTap: () {
-                          setState(() {
-                            String temp = _fromCurrency;
-                            _fromCurrency = _toCurrency;
-                            _toCurrency = temp;
-                          });
-                        },
-                        child: Container(
-                          padding: const EdgeInsets.all(8),
-                          decoration: BoxDecoration(color: const Color(0xFF0056D2), shape: BoxShape.circle, border: Border.all(color: Colors.white, width: 4)),
-                          child: const Icon(Icons.swap_vert_rounded, color: Colors.white, size: 20),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+              prefixIcon: const Icon(
+                Icons.attach_money,
+                color: AppColors.primaryBlue,
               ),
             ),
-            const SizedBox(height: 32),
+          ),
+          const SizedBox(height: 24),
 
-            // Reference Zones (Sesuai Request Dosen)
-            Row(
-              children: const [
-                Icon(Icons.access_time, color: Color(0xFF0056D2), size: 20),
-                SizedBox(width: 8),
-                Text('Reference Zones', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
+          // Dropdown Row with Swap Button
+          Row(
+            children: [
+              Expanded(
+                child: _buildDropdown(
+                  value: _fromCurrency,
+                  onChanged: (val) {
+                    setState(() {
+                      _fromCurrency = val!;
+                      _convert();
+                    });
+                  },
+                ),
+              ),
+              Container(
+                margin: const EdgeInsets.symmetric(horizontal: 16),
+                decoration: BoxDecoration(
+                  color: AppColors.primaryBlue.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  icon: const Icon(
+                    Icons.swap_horiz,
+                    color: AppColors.primaryBlue,
+                    size: 28,
+                  ),
+                  onPressed: _swapCurrencies,
+                ),
+              ),
+              Expanded(
+                child: _buildDropdown(
+                  value: _toCurrency,
+                  onChanged: (val) {
+                    setState(() {
+                      _toCurrency = val!;
+                      _convert();
+                    });
+                  },
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 40),
+
+          // Result Card
+          Container(
+            width: double.infinity,
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                colors: [AppColors.primaryBlue, Colors.blue.shade300],
+              ),
+              borderRadius: BorderRadius.circular(20),
+              boxShadow: [
+                BoxShadow(
+                  color: AppColors.primaryBlue.withOpacity(0.3),
+                  blurRadius: 10,
+                  offset: const Offset(0, 5),
+                ),
               ],
             ),
-            const SizedBox(height: 16),
-            
-            // Grid Zones Full 4 Item (WIB, WITA, WIT, London)
-            GridView.count(
-              shrinkWrap: true,
-              physics: const NeverScrollableScrollPhysics(),
-              crossAxisCount: 2,
-              crossAxisSpacing: 16,
-              mainAxisSpacing: 16,
-              childAspectRatio: 1.8,
+            child: Column(
               children: [
-                _buildZoneCard('Jakarta', '14:30', 'WIB', 'Local', const Color(0xFF0056D2)),
-                _buildZoneCard('Bali', '15:30', 'WITA', '+1h', AppColors.successGreen),
-                _buildZoneCard('Papua', '16:30', 'WIT', '+2h', AppColors.successGreen), 
-                _buildZoneCard('London', '07:30', 'GMT', '-7h', AppColors.dangerRed),
+                const Text(
+                  'Converted Amount',
+                  style: TextStyle(color: Colors.white70, fontSize: 14),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  NumberFormat.currency(
+                    symbol: '',
+                    decimalDigits: 2,
+                  ).format(_result),
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 36,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  _toCurrency,
+                  style: const TextStyle(
+                    color: Colors.white,
+                    fontSize: 18,
+                    fontWeight: FontWeight.w500,
+                  ),
+                ),
               ],
             ),
-          ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDropdown({
+    required String value,
+    required Function(String?) onChanged,
+  }) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: DropdownButtonHideUnderline(
+        child: DropdownButton<String>(
+          value: value,
+          isExpanded: true,
+          items: ['IDR', 'USD', 'JPY'].map((String curr) {
+            return DropdownMenuItem(
+              value: curr,
+              child: Text(
+                curr,
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
+              ),
+            );
+          }).toList(),
+          onChanged: onChanged,
         ),
       ),
     );
   }
+}
 
-  // Helper Custom Widget buat Input Box yang Dropdown-nya jalan
-  Widget _buildInteractiveInputBox(String label, String value, String selectedCurrency, Color bgColor, Color textColor, bool isTop) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(12)),
+// ==========================================
+// TAB 2: TIME ZONES CONVERTER
+// ==========================================
+class _TimeTab extends StatefulWidget {
+  const _TimeTab();
+
+  @override
+  State<_TimeTab> createState() => _TimeTabState();
+}
+
+class _TimeTabState extends State<_TimeTab> {
+  late Timer _timer;
+  DateTime _currentTime = DateTime.now().toUtc();
+
+  @override
+  void initState() {
+    super.initState();
+    // Update jam setiap detik biar real-time
+    _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
+      setState(() {
+        _currentTime = DateTime.now().toUtc();
+      });
+    });
+  }
+
+  @override
+  void dispose() {
+    _timer.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.all(24.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(label, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
+          const Text(
+            'World Clocks',
+            style: TextStyle(
+              fontSize: 24,
+              fontWeight: FontWeight.bold,
+              color: Colors.black87,
+            ),
+          ),
           const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(value, style: TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: textColor)),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(20), boxShadow: [BoxShadow(color: Colors.black.withOpacity(0.05), blurRadius: 4)]),
-                child: Row(
-                  children: [
-                    const Icon(Icons.attach_money, size: 14, color: AppColors.textSecondary),
-                    const SizedBox(width: 4),
-                    DropdownButtonHideUnderline(
-                      child: DropdownButton<String>(
-                        value: selectedCurrency,
-                        icon: const Icon(Icons.keyboard_arrow_down, size: 16),
-                        style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.black),
-                        items: _currencies.map((String currency) {
-                          return DropdownMenuItem<String>(
-                            value: currency,
-                            child: Text(currency),
-                          );
-                        }).toList(),
-                        onChanged: (newValue) {
-                          setState(() {
-                            if (isTop) {
-                              _fromCurrency = newValue!;
-                            } else {
-                              _toCurrency = newValue!;
-                            }
-                          });
-                        },
-                      ),
-                    ),
-                  ],
-                ),
-              )
-            ],
-          )
+          const Text(
+            'Keep track of time across different zones.',
+            style: TextStyle(fontSize: 14, color: Colors.grey),
+          ),
+          const SizedBox(height: 24),
+
+          _buildTimeCard(
+            'Jakarta (WIB)',
+            _currentTime.add(const Duration(hours: 7)),
+            Icons.location_city,
+          ),
+          _buildTimeCard(
+            'Bali (WITA)',
+            _currentTime.add(const Duration(hours: 8)),
+            Icons.beach_access,
+          ),
+          _buildTimeCard(
+            'Papua (WIT)',
+            _currentTime.add(const Duration(hours: 9)),
+            Icons.landscape,
+          ),
+          _buildTimeCard(
+            'London (UK)',
+            _currentTime.add(const Duration(hours: 1)),
+            Icons.account_balance,
+          ), // Asumsi BST (UTC+1)
         ],
       ),
     );
   }
 
-  Widget _buildZoneCard(String city, String time, String timezone, String offset, Color offsetColor) {
+  Widget _buildTimeCard(String title, DateTime time, IconData icon) {
+    String formattedTime = DateFormat('HH:mm:ss').format(time);
+    String formattedDate = DateFormat('EEE, dd MMM yyyy').format(time);
+
     return Container(
-      padding: const EdgeInsets.all(16),
+      margin: const EdgeInsets.only(bottom: 16),
+      padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: AppColors.whiteCard,
-        borderRadius: BorderRadius.circular(12),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
         border: Border.all(color: Colors.grey.shade200),
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Row(
         children: [
-          Text(city, style: const TextStyle(fontSize: 12, color: AppColors.textSecondary)),
-          const SizedBox(height: 4),
-          Text(time, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold, color: AppColors.textPrimary)),
-          const SizedBox(height: 4),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(timezone, style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold, color: Color(0xFF0056D2))),
-              Text(offset, style: TextStyle(fontSize: 12, color: offsetColor)),
-            ],
-          )
+          Container(
+            padding: const EdgeInsets.all(12),
+            decoration: BoxDecoration(
+              color: AppColors.primaryBlue.withOpacity(0.1),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: AppColors.primaryBlue, size: 28),
+          ),
+          const SizedBox(width: 16),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: const TextStyle(
+                    fontWeight: FontWeight.bold,
+                    fontSize: 16,
+                    color: Colors.black87,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  formattedDate,
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 12),
+                ),
+              ],
+            ),
+          ),
+          Text(
+            formattedTime,
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w900,
+              color: AppColors.primaryBlue,
+            ),
+          ),
         ],
       ),
-    );
-  }
-
-  PreferredSizeWidget _buildCustomAppBar(BuildContext context) {
-    return AppBar(
-      backgroundColor: Colors.transparent,
-      elevation: 0,
-      leading: IconButton(icon: const Icon(Icons.arrow_back, color: AppColors.primaryBlue), onPressed: () => Navigator.pop(context)),
-      title: const Text('GoReady', style: TextStyle(color: AppColors.primaryBlue, fontWeight: FontWeight.bold, fontSize: 20)),
-      centerTitle: true,
-      actions: [IconButton(icon: const Icon(Icons.notifications_none_outlined, color: AppColors.primaryBlue), onPressed: () {})],
     );
   }
 }

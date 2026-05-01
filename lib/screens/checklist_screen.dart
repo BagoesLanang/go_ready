@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:google_generative_ai/google_generative_ai.dart';
 import 'package:sensors_plus/sensors_plus.dart';
 import 'dart:async';
+import 'dart:convert'; // Tambahin ini buat parsing JSON
 import '../theme/colors.dart';
+import 'ready_to_go_screen.dart'; // Sesuaikan path-nya kalo beda folder ya
 
 class ChecklistScreen extends StatefulWidget {
   const ChecklistScreen({super.key});
@@ -12,60 +14,145 @@ class ChecklistScreen extends StatefulWidget {
 }
 
 class _ChecklistScreenState extends State<ChecklistScreen> {
-  // --- 1. State Variables ---
   bool _isLoadingAi = true;
-  String _aiSuggestion = "Thinking...";
-  
-  // Daftar barang bawaan (Sesuai Konsep Lo)
+
   final List<Map<String, dynamic>> _essentials = [
-    {'name': 'Dompet', 'isChecked': false},
-    {'name': 'Handphone', 'isChecked': false},
-    {'name': 'Kunci Motor/Kost', 'isChecked': false},
+    {'name': 'Wallet', 'isChecked': false},
+    {'name': 'Phone', 'isChecked': false},
     {'name': 'Charger', 'isChecked': false},
+    {'name': 'Keys', 'isChecked': false},
   ];
 
-  // Sensor State
+  List<Map<String, dynamic>> _aiSuggestions = [];
+  final TextEditingController _newItemController = TextEditingController();
+
   StreamSubscription<AccelerometerEvent>? _accelSub;
   bool _isWarningActive = false;
 
   @override
   void initState() {
     super.initState();
-    _getAiSuggestion(); // Panggil AI pas buka halaman
-    _initAccelerometer(); // Aktifin sensor penjaga
+    _getAiSuggestion();
+    _initAccelerometer();
   }
 
-  // --- 2. Logic AI (Gemini) ---
+  // --- LOGIC AI YANG UDAH DI-UPGRADE ---
   Future<void> _getAiSuggestion() async {
     try {
-      // API Key lo masukin sini bre
-      final model = GenerativeModel(model: 'gemini-1.5-flash', apiKey: 'ISI_API_KEY_LO_DI_SINI');
-      
-      // Data LBS & Waktu (Simulation)
+      // PENTING: Masukin API Key lo beneran di sini ya bre!
+      final model = GenerativeModel(
+        model: 'gemini-1.5-flash',
+        apiKey: 'ISI_API_KEY_LO_DI_SINI',
+      );
+
       final now = DateTime.now();
-      final location = "Mertoyudan, Magelang"; // Dummy LBS
-      
-      final prompt = "User mau keluar jam ${now.hour}:${now.minute} di lokasi $location. Berikan saran 1-2 barang esensial tambahan yang unik selain Dompet, HP, Kunci. Jawab sangat singkat (max 10 kata).";
-      
+      // Prompt kita ganti minta JSON biar gampang di-decode
+      final prompt =
+          "Jam sekarang ${now.hour}:${now.minute}. Berikan 2 saran barang esensial tambahan (jangan Wallet, Phone, Keys, Charger). Jawab HANYA menggunakan format array JSON murni tanpa markdown seperti ini: [{\"title\": \"NamaBarang\", \"desc\": \"Alasan singkat\"}]";
+
       final content = [Content.text(prompt)];
       final response = await model.generateContent(content);
 
-      setState(() {
-        _aiSuggestion = response.text ?? "Jangan lupa bawa semangat!";
-        _isLoadingAi = false;
-      });
+      if (response.text != null) {
+        // Bersihin markdown json kalau ai-nya bandel
+        String cleanJson = response.text!
+            .replaceAll('```json', '')
+            .replaceAll('```', '')
+            .trim();
+        List<dynamic> parsedData = jsonDecode(cleanJson);
+
+        setState(() {
+          _aiSuggestions = parsedData
+              .map(
+                (item) => {
+                  'title': item['title'].toString(),
+                  'desc': item['desc'].toString(),
+                  'icon': Icons.auto_awesome_outlined,
+                },
+              )
+              .toList();
+          _isLoadingAi = false;
+        });
+      }
     } catch (e) {
+      // Fallback kalo API Key belum diisi atau error
       setState(() {
-        _aiSuggestion = "Cek lagi perlengkapan musim ini ya!";
+        _aiSuggestions = [
+          {
+            'title': "API Key Belum Diisi",
+            'desc': 'Ganti tulisan ISI_API_KEY di code pake key aslimu.',
+            'icon': Icons.warning_amber_rounded,
+          },
+          {
+            'title': 'Bring a jacket',
+            'desc': 'Temperatures expected to drop by evening.',
+            'icon': Icons.cloud_outlined,
+          },
+        ];
         _isLoadingAi = false;
       });
     }
   }
 
-  // --- 3. Logic Sensor (Accelerometer) ---
+  // --- LOGIC CRUD BARANG ---
+  void _addNewItem() {
+    if (_newItemController.text.trim().isNotEmpty) {
+      setState(() {
+        _essentials.add({
+          'name': _newItemController.text.trim(),
+          'isChecked': false,
+        });
+        _newItemController.clear();
+      });
+      FocusScope.of(context).unfocus();
+    }
+  }
+
+  void _deleteItem(int index) {
+    setState(() {
+      _essentials.removeAt(index);
+    });
+  }
+
+  void _editItem(int index) {
+    _newItemController.text = _essentials[index]['name'];
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Edit Item'),
+        content: TextField(
+          controller: _newItemController,
+          decoration: const InputDecoration(hintText: "Nama barang baru..."),
+          autofocus: true,
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              _newItemController.clear();
+              Navigator.pop(context);
+            },
+            child: const Text('Cancel'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              if (_newItemController.text.trim().isNotEmpty) {
+                setState(() {
+                  _essentials[index]['name'] = _newItemController.text.trim();
+                });
+              }
+              _newItemController.clear();
+              Navigator.pop(context);
+            },
+            child: const Text('Save'),
+          ),
+        ],
+      ),
+    );
+  }
+
+  // --- LOGIC SENSOR ---
   void _initAccelerometer() {
     _accelSub = accelerometerEventStream().listen((AccelerometerEvent event) {
-      // Kalo HP gerak kenceng (Z axis atau X/Y kenceng)
       if (event.x.abs() > 12 || event.y.abs() > 12) {
         _checkIfReadyToGo();
       }
@@ -73,124 +160,354 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
   }
 
   void _checkIfReadyToGo() {
+    if (_essentials.isEmpty) return;
     bool allChecked = _essentials.every((item) => item['isChecked']);
-    
-    // Kalo belum lengkap tapi udah gerak, kasih warning!
+
     if (!allChecked && !_isWarningActive) {
       _isWarningActive = true;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('EITS! Barang belum lengkap, jangan jalan dulu! 🛑', 
-            textAlign: TextAlign.center, 
-            style: TextStyle(fontWeight: FontWeight.bold)
-          ),
-          backgroundColor: AppColors.dangerRed,
-          duration: Duration(seconds: 2),
-        ),
-      ).closed.then((_) => _isWarningActive = false);
+      ScaffoldMessenger.of(context)
+          .showSnackBar(
+            const SnackBar(
+              content: Text(
+                'EITS! Barang belum lengkap, jangan jalan dulu! 🛑',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
+              backgroundColor: AppColors.dangerRed,
+              duration: Duration(seconds: 2),
+            ),
+          )
+          .closed
+          .then((_) => _isWarningActive = false);
     }
   }
 
   @override
   void dispose() {
     _accelSub?.cancel();
+    _newItemController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    bool allChecked = _essentials.every((item) => item['isChecked']);
+    bool allChecked =
+        _essentials.isNotEmpty &&
+        _essentials.every((item) => item['isChecked']);
 
     return Scaffold(
-      backgroundColor: AppColors.background,
+      backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
-        title: const Text('Prevention Mode', style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold)),
         backgroundColor: Colors.white,
         elevation: 0,
         centerTitle: true,
+        title: const Text(
+          'GoReady',
+          style: TextStyle(
+            color: AppColors.primaryBlue,
+            fontWeight: FontWeight.bold,
+            fontSize: 20,
+          ),
+        ),
         leading: IconButton(
-          icon: const Icon(Icons.close, color: Colors.grey),
+          icon: const Icon(Icons.arrow_back, color: Colors.grey),
           onPressed: () => Navigator.pop(context),
         ),
       ),
       body: Column(
         children: [
-          // --- AI Suggestion Card ---
-          Container(
-            width: double.infinity,
-            margin: const EdgeInsets.all(24),
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              gradient: LinearGradient(colors: [AppColors.primaryBlue, Colors.blue.shade300]),
-              borderRadius: BorderRadius.circular(20),
-              boxShadow: [BoxShadow(color: AppColors.primaryBlue.withOpacity(0.3), blurRadius: 10)],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  children: [
-                    const Icon(Icons.auto_awesome, color: Colors.white, size: 20),
-                    const SizedBox(width: 8),
-                    const Text('AI SMART SUGGESTION', style: TextStyle(color: Colors.white70, fontSize: 12, fontWeight: FontWeight.bold)),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                _isLoadingAi 
-                  ? const LinearProgressIndicator(color: Colors.white, backgroundColor: Colors.white24)
-                  : Text(_aiSuggestion, style: const TextStyle(color: Colors.white, fontSize: 18, fontWeight: FontWeight.w600)),
-              ],
-            ),
-          ),
-
-          // --- Checklist Section ---
           Expanded(
-            child: ListView.builder(
-              padding: const EdgeInsets.symmetric(horizontal: 24),
-              itemCount: _essentials.length,
-              itemBuilder: (context, index) {
-                return Container(
-                  margin: const EdgeInsets.only(bottom: 12),
-                  decoration: BoxDecoration(
-                    color: Colors.white,
-                    borderRadius: BorderRadius.circular(15),
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.all(24.0),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Checklist Before You Go',
+                    style: TextStyle(
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.black87,
+                    ),
                   ),
-                  child: CheckboxListTile(
-                    title: Text(_essentials[index]['name'], style: const TextStyle(fontWeight: FontWeight.w500)),
-                    value: _essentials[index]['isChecked'],
-                    activeColor: AppColors.primaryBlue,
-                    checkboxShape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(5)),
-                    onChanged: (val) {
-                      setState(() {
-                        _essentials[index]['isChecked'] = val!;
-                      });
-                    },
+                  const SizedBox(height: 8),
+                  const Text(
+                    'Tap items as you pack them to ensure nothing is left behind.',
+                    style: TextStyle(fontSize: 14, color: Colors.grey),
                   ),
-                );
-              },
+                  const SizedBox(height: 24),
+
+                  // --- LIST BARANG (Udah ada Edit & Delete) ---
+                  ..._essentials.asMap().entries.map((entry) {
+                    int idx = entry.key;
+                    Map<String, dynamic> item = entry.value;
+                    bool isChecked = item['isChecked'];
+
+                    return GestureDetector(
+                      onTap: () {
+                        setState(() {
+                          _essentials[idx]['isChecked'] = !isChecked;
+                        });
+                      },
+                      child: AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        margin: const EdgeInsets.only(bottom: 12),
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 12,
+                        ),
+                        decoration: BoxDecoration(
+                          color: isChecked
+                              ? const Color(0xFFE8F5E9)
+                              : Colors.white,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(
+                            color: isChecked
+                                ? const Color(0xFFC8E6C9)
+                                : Colors.grey.shade300,
+                          ),
+                        ),
+                        child: Row(
+                          children: [
+                            Icon(
+                              isChecked
+                                  ? Icons.check_circle
+                                  : Icons.radio_button_unchecked,
+                              color: isChecked
+                                  ? const Color(0xFF2E7D32)
+                                  : Colors.grey.shade400,
+                              size: 24,
+                            ),
+                            const SizedBox(width: 16),
+                            Expanded(
+                              child: Text(
+                                item['name'],
+                                style: TextStyle(
+                                  fontSize: 16,
+                                  color: isChecked
+                                      ? const Color(0xFF2E7D32)
+                                      : Colors.black87,
+                                  fontWeight: isChecked
+                                      ? FontWeight.w500
+                                      : FontWeight.normal,
+                                ),
+                              ),
+                            ),
+                            // Tombol Edit & Delete muncul kalo belum dicentang
+                            if (!isChecked) ...[
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.edit_outlined,
+                                  color: Colors.grey,
+                                  size: 20,
+                                ),
+                                onPressed: () => _editItem(idx),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                              ),
+                              const SizedBox(width: 12),
+                              IconButton(
+                                icon: const Icon(
+                                  Icons.delete_outline,
+                                  color: AppColors.dangerRed,
+                                  size: 20,
+                                ),
+                                onPressed: () => _deleteItem(idx),
+                                padding: EdgeInsets.zero,
+                                constraints: const BoxConstraints(),
+                              ),
+                            ],
+                          ],
+                        ),
+                      ),
+                    );
+                  }),
+
+                  // --- INPUT TAMBAH BARANG ---
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: TextField(
+                          controller: _newItemController,
+                          decoration: InputDecoration(
+                            hintText: 'Add specific item...',
+                            hintStyle: TextStyle(
+                              color: Colors.grey.shade400,
+                              fontSize: 14,
+                            ),
+                            filled: true,
+                            fillColor: Colors.white,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: Colors.grey.shade300,
+                              ),
+                            ),
+                            enabledBorder: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(12),
+                              borderSide: BorderSide(
+                                color: Colors.grey.shade300,
+                              ),
+                            ),
+                          ),
+                          onSubmitted: (_) => _addNewItem(),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: AppColors.primaryBlue,
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: IconButton(
+                          icon: const Icon(Icons.add, color: Colors.white),
+                          onPressed: _addNewItem,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 40),
+
+                  // --- SMART SUGGESTIONS ---
+                  Row(
+                    children: [
+                      Container(
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFD97706),
+                          borderRadius: BorderRadius.circular(4),
+                        ),
+                        child: const Icon(
+                          Icons.auto_awesome,
+                          color: Colors.white,
+                          size: 14,
+                        ),
+                      ),
+                      const SizedBox(width: 8),
+                      const Text(
+                        'Smart Suggestions',
+                        style: TextStyle(
+                          color: Color(0xFFD97706),
+                          fontWeight: FontWeight.bold,
+                          fontSize: 14,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 16),
+
+                  SizedBox(
+                    height: 110,
+                    child: _isLoadingAi
+                        ? const Center(child: CircularProgressIndicator())
+                        : ListView.builder(
+                            scrollDirection: Axis.horizontal,
+                            itemCount: _aiSuggestions.length,
+                            itemBuilder: (context, index) {
+                              final suggestion = _aiSuggestions[index];
+                              return Container(
+                                width: 260,
+                                margin: const EdgeInsets.only(right: 16),
+                                padding: const EdgeInsets.all(16),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFE5E7EB),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Row(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Container(
+                                      padding: const EdgeInsets.all(8),
+                                      decoration: BoxDecoration(
+                                        color: Colors.white,
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                      child: Icon(
+                                        suggestion['icon'],
+                                        size: 20,
+                                        color: AppColors.primaryBlue,
+                                      ),
+                                    ),
+                                    const SizedBox(width: 12),
+                                    Expanded(
+                                      child: Column(
+                                        crossAxisAlignment:
+                                            CrossAxisAlignment.start,
+                                        children: [
+                                          Text(
+                                            suggestion['title'],
+                                            style: const TextStyle(
+                                              fontWeight: FontWeight.bold,
+                                              fontSize: 14,
+                                              color: Colors.black87,
+                                            ),
+                                            maxLines: 1,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                          const SizedBox(height: 4),
+                                          Text(
+                                            suggestion['desc'],
+                                            style: TextStyle(
+                                              color: Colors.grey.shade700,
+                                              fontSize: 12,
+                                            ),
+                                            maxLines: 2,
+                                            overflow: TextOverflow.ellipsis,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              );
+                            },
+                          ),
+                  ),
+                ],
+              ),
             ),
           ),
 
-          // --- Confirm Button ---
-          Padding(
-            padding: const EdgeInsets.all(24.0),
+          // --- TOMBOL KONFIRMASI ---
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: const BoxDecoration(color: Color(0xFFF8F9FA)),
             child: SizedBox(
               width: double.infinity,
               height: 55,
               child: ElevatedButton(
-                onPressed: allChecked ? () {
-                  // Logika nyatet ke history
-                  Navigator.pop(context);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(content: Text('Selamat jalan! Semua aman dibawa. ✅'), backgroundColor: AppColors.successGreen),
-                  );
-                } : null, // Disable kalo belum lengkap
+                onPressed: allChecked
+                    ? () {
+                        // Ganti Navigator.pop jadi ini:
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const ReadyToGoScreen(),
+                          ),
+                        );
+                      }
+                    : null,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primaryBlue,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                  disabledBackgroundColor: Colors.grey.shade300,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(12),
+                  ),
                   elevation: 0,
                 ),
-                child: const Text('Confirm & Go', style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white)),
+                child: Text(
+                  'Confirm Ready',
+                  style: TextStyle(
+                    fontSize: 16,
+                    fontWeight: FontWeight.bold,
+                    color: allChecked ? Colors.white : Colors.grey.shade500,
+                  ),
+                ),
               ),
             ),
           ),
