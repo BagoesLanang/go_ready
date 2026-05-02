@@ -6,6 +6,7 @@ import 'package:sensors_plus/sensors_plus.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/colors.dart';
+import '../services/api_service.dart'; // 🔥 IMPORT API BACKEND LU DI SINI
 import 'ready_to_go_screen.dart';
 
 class ChecklistScreen extends StatefulWidget {
@@ -300,13 +301,28 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
           child: SizedBox(
             height: 54,
             child: ElevatedButton(
-              onPressed: () {
-                Navigator.push(
-                  context,
-                  MaterialPageRoute(
-                    builder: (context) => const ReadyToGoScreen(),
-                  ),
-                );
+              // 🔥 LOGIC DB BACKEND LU DI-INJECT KE SINI BROK 🔥
+              onPressed: () async {
+                // Kumpulin barang yang udah dicentang
+                List<String> selectedItems = [];
+                for (var item in _checklistItems) {
+                  if (item['isChecked'] == true) {
+                    selectedItems.add(item['name']);
+                  }
+                }
+
+                // Tembak API lu bre
+                await saveTrip(selectedItems);
+
+                // Baru pindah halaman
+                if (context.mounted) {
+                  Navigator.pushReplacement(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const ReadyToGoScreen(),
+                    ),
+                  );
+                }
               },
               style: ElevatedButton.styleFrom(
                 backgroundColor: AppColors.primaryBlue,
@@ -436,7 +452,6 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                           ),
                         ),
                       ),
-
                       Row(
                         mainAxisSize: MainAxisSize.min,
                         children: [

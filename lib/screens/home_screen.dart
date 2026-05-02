@@ -12,13 +12,12 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // Nggak perlu Scaffold lagi karena udah dibungkus sama MainLayout
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Custom Header (Logo & Bell Icon)
+          // 🔥 HEADER (AMBIL DARI BACKEND LU BIAR ADA NOTIF)
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -30,15 +29,25 @@ class HomeScreen extends StatelessWidget {
                   fontWeight: FontWeight.bold,
                 ),
               ),
+              IconButton(
+                icon: const Icon(
+                  Icons.notifications_none_outlined,
+                  color: AppColors.primaryBlue,
+                ),
+                onPressed: () {
+                  // nanti bisa dipake notif backend
+                },
+              ),
             ],
           ),
+
           const SizedBox(height: 24),
 
-          // Greeting Text
           const Text(
             'Hello,',
             style: TextStyle(fontSize: 18, color: AppColors.textSecondary),
           ),
+
           const Text(
             'Ready to go?',
             style: TextStyle(
@@ -47,16 +56,16 @@ class HomeScreen extends StatelessWidget {
               color: AppColors.textPrimary,
             ),
           ),
+
           const SizedBox(height: 32),
 
-          // Big Action Buttons
+          // 🔥 BUTTON 1 (TETAP)
           _buildBigActionCard(
             title: "I'm Going Out",
             subtitle: "Start your preparation flow",
             color: AppColors.successGreen,
             icon: Icons.directions_run_rounded,
             onTap: () {
-              // --- NAVIGASI KE CHECKLIST ---
               Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -65,22 +74,27 @@ class HomeScreen extends StatelessWidget {
               );
             },
           ),
+
           const SizedBox(height: 16),
+
+          // 🔥 BUTTON 2 (SEDIKIT DI FIX BIAR LEBIH MASUK)
           _buildBigActionCard(
             title: "I Forgot Something",
-            subtitle: "History",
+            subtitle: "Quick search & rescue", // 🔥 dari lu (lebih cocok)
             color: AppColors.primaryBlue,
-            icon: Icons.history, // --- ICON UDAH DIGANTI JADI HISTORY ---
+            icon: Icons.search_rounded, // 🔥 balik ke search (lebih make sense)
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const FindItemScreen()),
+                MaterialPageRoute(
+                  builder: (context) => const FindItemScreen(),
+                ),
               );
             },
           ),
+
           const SizedBox(height: 32),
 
-          // Quick Access Section
           const Text(
             'QUICK ACCESS',
             style: TextStyle(
@@ -90,7 +104,9 @@ class HomeScreen extends StatelessWidget {
               color: AppColors.textSecondary,
             ),
           ),
+
           const SizedBox(height: 16),
+
           Row(
             children: [
               Expanded(
@@ -99,35 +115,47 @@ class HomeScreen extends StatelessWidget {
                   icon: Icons.near_me_outlined,
                   onTap: () {
                     if (onNavigate != null) {
-                      onNavigate!(
-                        2,
-                      ); // Pastiin index ini sesuai sama Tab Nearby lu
+                      onNavigate!(2);
                     }
                   },
                 ),
               ),
+
               const SizedBox(width: 16),
-              // const Expanded(
-              //   child: SizedBox(), // --- DUMMY KOSONG BIAR CARD DEPANNYA NGGA MEKAR ---
-              // ),
+
+              // 🔥 OPTIONAL: kalau mau balikin History tab tinggal aktifin ini
+              /*
+              Expanded(
+                child: _buildSmallActionCard(
+                  title: "History",
+                  icon: Icons.history,
+                  onTap: () {
+                    if (onNavigate != null) {
+                      onNavigate!(1);
+                    }
+                  },
+                ),
+              ),
+              */
             ],
           ),
+
           const SizedBox(height: 16),
 
-          // Mini Game Banner
+          // 🔥 MINI GAME (TETAP)
           GestureDetector(
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(builder: (context) => const MiniGameScreen()),
+                MaterialPageRoute(
+                  builder: (context) => const MiniGameScreen(),
+                ),
               );
             },
             child: Container(
               padding: const EdgeInsets.all(16),
               decoration: BoxDecoration(
-                color: const Color(
-                  0xFFF3C090,
-                ).withOpacity(0.4), // Warna soft orange
+                color: const Color(0xFFF3C090).withOpacity(0.4),
                 borderRadius: BorderRadius.circular(16),
               ),
               child: Row(
@@ -168,13 +196,16 @@ class HomeScreen extends StatelessWidget {
               ),
             ),
           ),
-          const SizedBox(height: 24), // Spacing bawah
+
+          const SizedBox(height: 24),
         ],
       ),
     );
   }
 
-  // --- HELPER WIDGETS ---
+  // =========================
+  // HELPER (TETAP)
+  // =========================
 
   Widget _buildBigActionCard({
     required String title,
