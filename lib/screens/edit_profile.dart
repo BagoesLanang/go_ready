@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // <-- WAJIB IMPORT INI
 import '../theme/colors.dart';
 
 class EditProfilePage extends StatefulWidget {
@@ -37,6 +38,35 @@ class _EditProfilePageState extends State<EditProfilePage> {
     _univController.dispose();
     _bioController.dispose();
     super.dispose();
+  }
+
+  // --- FUNGSI SAVE KE MEMORI HP ---
+  Future<void> _saveProfile() async {
+    // Panggil memori lokal HP
+    final prefs = await SharedPreferences.getInstance();
+
+    // Simpan ketikan terbaru ke harddisk HP
+    await prefs.setString('user_name', _nameController.text);
+    await prefs.setString('user_univ', _univController.text);
+    await prefs.setString('user_bio', _bioController.text);
+
+    if (mounted) {
+      // Munculin notif pop-up ijo biar UX-nya dapet
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Profile changes saved! 🚀'),
+          backgroundColor: Colors.green,
+          duration: Duration(seconds: 2),
+        ),
+      );
+
+      // Lempar balik data ke halaman profil biar UI depan langsung update
+      Navigator.pop(context, {
+        'name': _nameController.text,
+        'univ': _univController.text,
+        'bio': _bioController.text,
+      });
+    }
   }
 
   @override
@@ -86,14 +116,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed: () {
-                  // Lempar balik data ke halaman profil
-                  Navigator.pop(context, {
-                    'name': _nameController.text,
-                    'univ': _univController.text,
-                    'bio': _bioController.text,
-                  });
-                },
+                onPressed: _saveProfile, // <-- PANGGIL FUNGSI SAVE DI SINI
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primaryBlue,
                   shape: RoundedRectangleBorder(

@@ -3,7 +3,6 @@ import '../theme/colors.dart';
 import 'checklist_screen.dart';
 import 'find_item_screen.dart';
 import 'mini_game_screen.dart';
-import 'history_page.dart';
 import 'nearby_page.dart';
 
 class HomeScreen extends StatelessWidget {
@@ -30,15 +29,6 @@ class HomeScreen extends StatelessWidget {
                   fontSize: 20,
                   fontWeight: FontWeight.bold,
                 ),
-              ),
-              IconButton(
-                icon: const Icon(
-                  Icons.notifications_none_outlined,
-                  color: AppColors.primaryBlue,
-                ),
-                onPressed: () {
-                  // Action notifikasi nanti di sini
-                },
               ),
             ],
           ),
@@ -78,9 +68,9 @@ class HomeScreen extends StatelessWidget {
           const SizedBox(height: 16),
           _buildBigActionCard(
             title: "I Forgot Something",
-            subtitle: "Quick search & rescue",
+            subtitle: "History",
             color: AppColors.primaryBlue,
-            icon: Icons.search_rounded,
+            icon: Icons.history, // --- ICON UDAH DIGANTI JADI HISTORY ---
             onTap: () {
               Navigator.push(
                 context,
@@ -105,27 +95,21 @@ class HomeScreen extends StatelessWidget {
             children: [
               Expanded(
                 child: _buildSmallActionCard(
-                  title: "History",
-                  icon: Icons.history,
+                  title: "Nearby Locations",
+                  icon: Icons.near_me_outlined,
                   onTap: () {
                     if (onNavigate != null) {
-                      onNavigate!(1); // Index 1 itu Tab History
+                      onNavigate!(
+                        2,
+                      ); // Pastiin index ini sesuai sama Tab Nearby lu
                     }
                   },
                 ),
               ),
               const SizedBox(width: 16),
-              Expanded(
-                child: _buildSmallActionCard(
-                  title: "Nearby Locations",
-                  icon: Icons.near_me_outlined,
-                  onTap: () {
-                    if (onNavigate != null) {
-                      onNavigate!(2); // Index 1 itu Tab History
-                    }
-                  },
-                ),
-              ),
+              // const Expanded(
+              //   child: SizedBox(), // --- DUMMY KOSONG BIAR CARD DEPANNYA NGGA MEKAR ---
+              // ),
             ],
           ),
           const SizedBox(height: 16),
@@ -190,7 +174,7 @@ class HomeScreen extends StatelessWidget {
     );
   }
 
-  // --- HELPER WIDGETS (Biar code di atas clean) ---
+  // --- HELPER WIDGETS ---
 
   Widget _buildBigActionCard({
     required String title,

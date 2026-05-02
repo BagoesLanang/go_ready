@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/colors.dart';
 import 'home_screen.dart';
-import 'history_page.dart';
+import 'find_item_screen.dart'; // <-- Import Find Item gantiin History
 import 'nearby_page.dart';
 import 'profile_page.dart';
 import 'more_page.dart';
@@ -28,7 +28,7 @@ class _MainLayoutState extends State<MainLayout> {
           });
         },
       ),
-      const HistoryPage(),
+      const FindItemScreen(), // <-- Index 1 sekarang isinya fitur nyari barang
       const NearbyPage(),
       const ProfilePage(),
       const MorePage(),
@@ -58,9 +58,10 @@ class _MainLayoutState extends State<MainLayout> {
             label: 'Home',
           ),
           BottomNavigationBarItem(
-            icon: Icon(Icons.history_outlined),
-            activeIcon: Icon(Icons.history_rounded),
-            label: 'History',
+            // <-- Icon dan Label Navbar udah di-update
+            icon: Icon(Icons.history),
+            activeIcon: Icon(Icons.history),
+            label: 'Find',
           ),
           BottomNavigationBarItem(
             icon: Icon(Icons.near_me_outlined),

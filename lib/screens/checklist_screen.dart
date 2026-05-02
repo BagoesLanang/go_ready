@@ -1,10 +1,12 @@
-import 'package:flutter/material.dart';
-import 'package:google_generative_ai/google_generative_ai.dart';
-import 'package:sensors_plus/sensors_plus.dart';
 import 'dart:async';
-import 'dart:convert'; // Tambahin ini buat parsing JSON
+import 'dart:math';
+import 'dart:convert';
+import 'package:flutter/material.dart';
+import 'package:sensors_plus/sensors_plus.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/colors.dart';
-import 'ready_to_go_screen.dart'; // Sesuaikan path-nya kalo beda folder ya
+import 'ready_to_go_screen.dart';
 
 class ChecklistScreen extends StatefulWidget {
   const ChecklistScreen({super.key});
@@ -14,193 +16,262 @@ class ChecklistScreen extends StatefulWidget {
 }
 
 class _ChecklistScreenState extends State<ChecklistScreen> {
-  bool _isLoadingAi = true;
+  List<Map<String, dynamic>> _checklistItems = [];
 
-  final List<Map<String, dynamic>> _essentials = [
-    {'name': 'Wallet', 'isChecked': false},
-    {'name': 'Phone', 'isChecked': false},
-    {'name': 'Charger', 'isChecked': false},
-    {'name': 'Keys', 'isChecked': false},
-  ];
+  StreamSubscription<UserAccelerometerEvent>? _accelerometerSubscription;
+  final FlutterLocalNotificationsPlugin _localNotifPlugin =
+      FlutterLocalNotificationsPlugin();
 
-  List<Map<String, dynamic>> _aiSuggestions = [];
-  final TextEditingController _newItemController = TextEditingController();
-
-  StreamSubscription<AccelerometerEvent>? _accelSub;
-  bool _isWarningActive = false;
+  bool _isCooldown = false;
+  int _stepCounter = 0;
+  DateTime _lastStepTime = DateTime.now(); // Pencatat waktu langkah
 
   @override
   void initState() {
     super.initState();
-    _getAiSuggestion();
-    _initAccelerometer();
+    _loadChecklistData();
+    _setupNotifications();
+    _startListeningToSensor();
   }
 
-  // --- LOGIC AI YANG UDAH DI-UPGRADE ---
-  Future<void> _getAiSuggestion() async {
-    try {
-      // PENTING: Masukin API Key lo beneran di sini ya bre!
-      final model = GenerativeModel(
-        model: 'gemini-1.5-flash',
-        apiKey: 'ISI_API_KEY_LO_DI_SINI',
-      );
+  // --- LOGIC CRUD 1: LOAD & SAVE DARI MEMORI HP ---
+  Future<void> _loadChecklistData() async {
+    final prefs = await SharedPreferences.getInstance();
+    final String? savedData = prefs.getString('my_checklist');
 
-      final now = DateTime.now();
-      // Prompt kita ganti minta JSON biar gampang di-decode
-      final prompt =
-          "Jam sekarang ${now.hour}:${now.minute}. Berikan 2 saran barang esensial tambahan (jangan Wallet, Phone, Keys, Charger). Jawab HANYA menggunakan format array JSON murni tanpa markdown seperti ini: [{\"title\": \"NamaBarang\", \"desc\": \"Alasan singkat\"}]";
-
-      final content = [Content.text(prompt)];
-      final response = await model.generateContent(content);
-
-      if (response.text != null) {
-        // Bersihin markdown json kalau ai-nya bandel
-        String cleanJson = response.text!
-            .replaceAll('```json', '')
-            .replaceAll('```', '')
-            .trim();
-        List<dynamic> parsedData = jsonDecode(cleanJson);
-
-        setState(() {
-          _aiSuggestions = parsedData
-              .map(
-                (item) => {
-                  'title': item['title'].toString(),
-                  'desc': item['desc'].toString(),
-                  'icon': Icons.auto_awesome_outlined,
-                },
-              )
-              .toList();
-          _isLoadingAi = false;
-        });
-      }
-    } catch (e) {
-      // Fallback kalo API Key belum diisi atau error
+    if (savedData != null) {
       setState(() {
-        _aiSuggestions = [
-          {
-            'title': "API Key Belum Diisi",
-            'desc': 'Ganti tulisan ISI_API_KEY di code pake key aslimu.',
-            'icon': Icons.warning_amber_rounded,
-          },
-          {
-            'title': 'Bring a jacket',
-            'desc': 'Temperatures expected to drop by evening.',
-            'icon': Icons.cloud_outlined,
-          },
+        _checklistItems = List<Map<String, dynamic>>.from(
+          json.decode(savedData),
+        );
+      });
+    } else {
+      setState(() {
+        _checklistItems = [
+          {'id': '1', 'name': 'Wallet', 'isChecked': false},
+          {'id': '2', 'name': 'Phone', 'isChecked': false},
+          {'id': '3', 'name': 'Charger', 'isChecked': false},
+          {'id': '4', 'name': 'Keys', 'isChecked': false},
         ];
-        _isLoadingAi = false;
       });
     }
   }
 
-  // --- LOGIC CRUD BARANG ---
-  void _addNewItem() {
-    if (_newItemController.text.trim().isNotEmpty) {
-      setState(() {
-        _essentials.add({
-          'name': _newItemController.text.trim(),
-          'isChecked': false,
-        });
-        _newItemController.clear();
-      });
-      FocusScope.of(context).unfocus();
-    }
+  Future<void> _saveChecklistData() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.setString('my_checklist', json.encode(_checklistItems));
   }
 
-  void _deleteItem(int index) {
-    setState(() {
-      _essentials.removeAt(index);
-    });
+  // --- LOGIC HELPER BUAT SNACKBAR ERROR ---
+  void _showDuplicateError(String itemName) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text('Eits, barang "$itemName" udah ada di list lu brok!'),
+        backgroundColor: Colors.redAccent, // Pake merah biar keliatan error
+        behavior: SnackBarBehavior.floating,
+        duration: const Duration(seconds: 2),
+      ),
+    );
   }
 
-  void _editItem(int index) {
-    _newItemController.text = _essentials[index]['name'];
+  // --- LOGIC CRUD 2: POP-UP BUAT CREATE & UPDATE + VALIDASI DUPLIKAT ---
+  void _showItemDialog({int? index}) {
+    TextEditingController controller = TextEditingController(
+      text: index != null ? _checklistItems[index]['name'] : '',
+    );
+
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
-        title: const Text('Edit Item'),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: Text(
+          index != null ? 'Edit Item' : 'Add New Item',
+          style: const TextStyle(
+            fontWeight: FontWeight.bold,
+            color: AppColors.textPrimary,
+          ),
+        ),
         content: TextField(
-          controller: _newItemController,
-          decoration: const InputDecoration(hintText: "Nama barang baru..."),
+          controller: controller,
+          decoration: InputDecoration(
+            hintText: 'Misal: Kacamata, Helm, dll',
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+            focusedBorder: OutlineInputBorder(
+              borderRadius: BorderRadius.circular(12),
+              borderSide: const BorderSide(
+                color: AppColors.primaryBlue,
+                width: 2,
+              ),
+            ),
+          ),
           autofocus: true,
         ),
         actions: [
           TextButton(
-            onPressed: () {
-              _newItemController.clear();
-              Navigator.pop(context);
-            },
-            child: const Text('Cancel'),
+            onPressed: () => Navigator.pop(context),
+            child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
           ),
           ElevatedButton(
             onPressed: () {
-              if (_newItemController.text.trim().isNotEmpty) {
+              String newItemName = controller.text.trim();
+
+              if (newItemName.isNotEmpty) {
+                // --- CEK DUPLIKAT DI SINI (Case Insensitive) ---
+                bool isDuplicate = _checklistItems.any(
+                  (item) =>
+                      item['name'].toString().toLowerCase() ==
+                      newItemName.toLowerCase(),
+                );
+
+                if (index != null) {
+                  // Kalo lagi ngedit: pastiin dia nggak ganti nama jadi barang yang udah ada
+                  String currentName = _checklistItems[index]['name']
+                      .toString()
+                      .toLowerCase();
+                  if (isDuplicate && newItemName.toLowerCase() != currentName) {
+                    _showDuplicateError(newItemName);
+                    return; // Stop, jangan disave!
+                  }
+                } else {
+                  // Kalo lagi nambah baru: pastiin belom ada
+                  if (isDuplicate) {
+                    _showDuplicateError(newItemName);
+                    return; // Stop, jangan disave!
+                  }
+                }
+
+                // Kalo aman (nggak duplikat), baru lanjut save
                 setState(() {
-                  _essentials[index]['name'] = _newItemController.text.trim();
+                  if (index != null) {
+                    _checklistItems[index]['name'] = newItemName;
+                  } else {
+                    _checklistItems.add({
+                      'id': DateTime.now().millisecondsSinceEpoch.toString(),
+                      'name': newItemName,
+                      'isChecked': false,
+                    });
+                  }
                 });
+                _saveChecklistData();
+                Navigator.pop(context); // Tutup dialognya
               }
-              _newItemController.clear();
-              Navigator.pop(context);
             },
-            child: const Text('Save'),
+            style: ElevatedButton.styleFrom(
+              backgroundColor: AppColors.primaryBlue,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+            ),
+            child: const Text('Save', style: TextStyle(color: Colors.white)),
           ),
         ],
       ),
     );
   }
 
-  // --- LOGIC SENSOR ---
-  void _initAccelerometer() {
-    _accelSub = accelerometerEventStream().listen((AccelerometerEvent event) {
-      if (event.x.abs() > 12 || event.y.abs() > 12) {
-        _checkIfReadyToGo();
+  // --- LOGIC NOTIFIKASI & SENSOR ---
+  Future<void> _setupNotifications() async {
+    const AndroidInitializationSettings initSettingsAndroid =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+    const InitializationSettings initSettings = InitializationSettings(
+      android: initSettingsAndroid,
+    );
+    await _localNotifPlugin.initialize(settings: initSettings);
+    _localNotifPlugin
+        .resolvePlatformSpecificImplementation<
+          AndroidFlutterLocalNotificationsPlugin
+        >()
+        ?.requestNotificationsPermission();
+  }
+
+  // LOGIC SENSOR REVISI: LEBIH SENSITIF TAPI ANTI TREMOR
+  void _startListeningToSensor() {
+    _accelerometerSubscription = userAccelerometerEventStream().listen((
+      UserAccelerometerEvent event,
+    ) {
+      double acceleration = sqrt(
+        pow(event.x, 2) + pow(event.y, 2) + pow(event.z, 2),
+      );
+
+      // THRESHOLD TURUN JADI 1.5 (Jalan biasa di kantong tetep kebaca)
+      if (acceleration > 1.5) {
+        DateTime now = DateTime.now();
+        int timeDifference = now.difference(_lastStepTime).inMilliseconds;
+
+        // Reset kalo diem lebih dari 3 detik
+        if (timeDifference > 3000) {
+          _stepCounter = 0;
+        }
+
+        // Filter tremor: Jeda tiap langkah minimal 400ms
+        if (timeDifference > 400) {
+          _stepCounter++;
+          _lastStepTime = now;
+
+          // TURUNIN JADI 7 LANGKAH (Biar gampang ngetestnya)
+          if (_stepCounter >= 7) {
+            _evaluateChecklistAndNotify();
+            _stepCounter = 0;
+          }
+        }
       }
     });
   }
 
-  void _checkIfReadyToGo() {
-    if (_essentials.isEmpty) return;
-    bool allChecked = _essentials.every((item) => item['isChecked']);
+  Future<void> _evaluateChecklistAndNotify() async {
+    if (_isCooldown) return;
+    bool hasUncheckedItems = _checklistItems.any(
+      (item) => item['isChecked'] == false,
+    );
+    if (!hasUncheckedItems) return;
 
-    if (!allChecked && !_isWarningActive) {
-      _isWarningActive = true;
-      ScaffoldMessenger.of(context)
-          .showSnackBar(
-            const SnackBar(
-              content: Text(
-                'EITS! Barang belum lengkap, jangan jalan dulu! 🛑',
-                textAlign: TextAlign.center,
-                style: TextStyle(fontWeight: FontWeight.bold),
-              ),
-              backgroundColor: AppColors.dangerRed,
-              duration: Duration(seconds: 2),
-            ),
-          )
-          .closed
-          .then((_) => _isWarningActive = false);
-    }
+    String missingItem = _checklistItems.firstWhere(
+      (item) => item['isChecked'] == false,
+    )['name'];
+    setState(() {
+      _isCooldown = true;
+    });
+
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+          'goready_channel',
+          'GoReady Reminders',
+          importance: Importance.max,
+          priority: Priority.high,
+        );
+    const NotificationDetails platformDetails = NotificationDetails(
+      android: androidDetails,
+    );
+
+    await _localNotifPlugin.show(
+      id: 0,
+      title: '🚨 Wah, kamu mau pergi?',
+      body: 'Barang kamu belum lengkap, jangan lupa bawa $missingItem!',
+      notificationDetails: platformDetails,
+    );
+
+    Future.delayed(const Duration(seconds: 15), () {
+      if (mounted) setState(() => _isCooldown = false);
+    });
   }
 
   @override
   void dispose() {
-    _accelSub?.cancel();
-    _newItemController.dispose();
+    _accelerometerSubscription?.cancel();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
-    bool allChecked =
-        _essentials.isNotEmpty &&
-        _essentials.every((item) => item['isChecked']);
-
     return Scaffold(
       backgroundColor: const Color(0xFFF8F9FA),
       appBar: AppBar(
-        backgroundColor: Colors.white,
+        backgroundColor: const Color(0xFFF8F9FA),
         elevation: 0,
-        centerTitle: true,
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Colors.grey),
+          onPressed: () => Navigator.pop(context),
+        ),
         title: const Text(
           'GoReady',
           style: TextStyle(
@@ -209,306 +280,209 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
             fontSize: 20,
           ),
         ),
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Colors.grey),
-          onPressed: () => Navigator.pop(context),
-        ),
+        centerTitle: true,
       ),
-      body: Column(
-        children: [
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(24.0),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Text(
-                    'Checklist Before You Go',
-                    style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.black87,
-                    ),
-                  ),
-                  const SizedBox(height: 8),
-                  const Text(
-                    'Tap items as you pack them to ensure nothing is left behind.',
-                    style: TextStyle(fontSize: 14, color: Colors.grey),
-                  ),
-                  const SizedBox(height: 24),
 
-                  // --- LIST BARANG (Udah ada Edit & Delete) ---
-                  ..._essentials.asMap().entries.map((entry) {
-                    int idx = entry.key;
-                    Map<String, dynamic> item = entry.value;
-                    bool isChecked = item['isChecked'];
+      floatingActionButton: FloatingActionButton(
+        onPressed: () => _showItemDialog(),
+        backgroundColor: AppColors.primaryBlue,
+        elevation: 4,
+        child: const Icon(Icons.add, color: Colors.white, size: 28),
+      ),
 
-                    return GestureDetector(
-                      onTap: () {
-                        setState(() {
-                          _essentials[idx]['isChecked'] = !isChecked;
-                        });
-                      },
-                      child: AnimatedContainer(
-                        duration: const Duration(milliseconds: 200),
-                        margin: const EdgeInsets.only(bottom: 12),
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                        decoration: BoxDecoration(
-                          color: isChecked
-                              ? const Color(0xFFE8F5E9)
-                              : Colors.white,
-                          borderRadius: BorderRadius.circular(12),
-                          border: Border.all(
-                            color: isChecked
-                                ? const Color(0xFFC8E6C9)
-                                : Colors.grey.shade300,
-                          ),
-                        ),
-                        child: Row(
-                          children: [
-                            Icon(
-                              isChecked
-                                  ? Icons.check_circle
-                                  : Icons.radio_button_unchecked,
-                              color: isChecked
-                                  ? const Color(0xFF2E7D32)
-                                  : Colors.grey.shade400,
-                              size: 24,
-                            ),
-                            const SizedBox(width: 16),
-                            Expanded(
-                              child: Text(
-                                item['name'],
-                                style: TextStyle(
-                                  fontSize: 16,
-                                  color: isChecked
-                                      ? const Color(0xFF2E7D32)
-                                      : Colors.black87,
-                                  fontWeight: isChecked
-                                      ? FontWeight.w500
-                                      : FontWeight.normal,
-                                ),
-                              ),
-                            ),
-                            // Tombol Edit & Delete muncul kalo belum dicentang
-                            if (!isChecked) ...[
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.edit_outlined,
-                                  color: Colors.grey,
-                                  size: 20,
-                                ),
-                                onPressed: () => _editItem(idx),
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(),
-                              ),
-                              const SizedBox(width: 12),
-                              IconButton(
-                                icon: const Icon(
-                                  Icons.delete_outline,
-                                  color: AppColors.dangerRed,
-                                  size: 20,
-                                ),
-                                onPressed: () => _deleteItem(idx),
-                                padding: EdgeInsets.zero,
-                                constraints: const BoxConstraints(),
-                              ),
-                            ],
-                          ],
-                        ),
-                      ),
-                    );
-                  }),
-
-                  // --- INPUT TAMBAH BARANG ---
-                  const SizedBox(height: 8),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: TextField(
-                          controller: _newItemController,
-                          decoration: InputDecoration(
-                            hintText: 'Add specific item...',
-                            hintStyle: TextStyle(
-                              color: Colors.grey.shade400,
-                              fontSize: 14,
-                            ),
-                            filled: true,
-                            fillColor: Colors.white,
-                            contentPadding: const EdgeInsets.symmetric(
-                              horizontal: 16,
-                              vertical: 12,
-                            ),
-                            border: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(
-                                color: Colors.grey.shade300,
-                              ),
-                            ),
-                            enabledBorder: OutlineInputBorder(
-                              borderRadius: BorderRadius.circular(12),
-                              borderSide: BorderSide(
-                                color: Colors.grey.shade300,
-                              ),
-                            ),
-                          ),
-                          onSubmitted: (_) => _addNewItem(),
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Container(
-                        decoration: BoxDecoration(
-                          color: AppColors.primaryBlue,
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        child: IconButton(
-                          icon: const Icon(Icons.add, color: Colors.white),
-                          onPressed: _addNewItem,
-                        ),
-                      ),
-                    ],
+      bottomNavigationBar: Container(
+        padding: const EdgeInsets.all(24),
+        decoration: BoxDecoration(
+          color: const Color(0xFFF8F9FA),
+          border: Border(top: BorderSide(color: Colors.grey.shade200)),
+        ),
+        child: SafeArea(
+          child: SizedBox(
+            height: 54,
+            child: ElevatedButton(
+              onPressed: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ReadyToGoScreen(),
                   ),
-                  const SizedBox(height: 40),
-
-                  // --- SMART SUGGESTIONS ---
-                  Row(
-                    children: [
-                      Container(
-                        padding: const EdgeInsets.all(4),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFD97706),
-                          borderRadius: BorderRadius.circular(4),
-                        ),
-                        child: const Icon(
-                          Icons.auto_awesome,
-                          color: Colors.white,
-                          size: 14,
-                        ),
-                      ),
-                      const SizedBox(width: 8),
-                      const Text(
-                        'Smart Suggestions',
-                        style: TextStyle(
-                          color: Color(0xFFD97706),
-                          fontWeight: FontWeight.bold,
-                          fontSize: 14,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 16),
-
-                  SizedBox(
-                    height: 110,
-                    child: _isLoadingAi
-                        ? const Center(child: CircularProgressIndicator())
-                        : ListView.builder(
-                            scrollDirection: Axis.horizontal,
-                            itemCount: _aiSuggestions.length,
-                            itemBuilder: (context, index) {
-                              final suggestion = _aiSuggestions[index];
-                              return Container(
-                                width: 260,
-                                margin: const EdgeInsets.only(right: 16),
-                                padding: const EdgeInsets.all(16),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFE5E7EB),
-                                  borderRadius: BorderRadius.circular(12),
-                                ),
-                                child: Row(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Container(
-                                      padding: const EdgeInsets.all(8),
-                                      decoration: BoxDecoration(
-                                        color: Colors.white,
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                      child: Icon(
-                                        suggestion['icon'],
-                                        size: 20,
-                                        color: AppColors.primaryBlue,
-                                      ),
-                                    ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
-                                        children: [
-                                          Text(
-                                            suggestion['title'],
-                                            style: const TextStyle(
-                                              fontWeight: FontWeight.bold,
-                                              fontSize: 14,
-                                              color: Colors.black87,
-                                            ),
-                                            maxLines: 1,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                          const SizedBox(height: 4),
-                                          Text(
-                                            suggestion['desc'],
-                                            style: TextStyle(
-                                              color: Colors.grey.shade700,
-                                              fontSize: 12,
-                                            ),
-                                            maxLines: 2,
-                                            overflow: TextOverflow.ellipsis,
-                                          ),
-                                        ],
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              );
-                            },
-                          ),
-                  ),
-                ],
+                );
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: AppColors.primaryBlue,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+                elevation: 0,
+              ),
+              child: const Text(
+                'Confirm Ready',
+                style: TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
               ),
             ),
           ),
+        ),
+      ),
 
-          // --- TOMBOL KONFIRMASI ---
-          Container(
-            padding: const EdgeInsets.all(24),
-            decoration: const BoxDecoration(color: Color(0xFFF8F9FA)),
-            child: SizedBox(
-              width: double.infinity,
-              height: 55,
-              child: ElevatedButton(
-                onPressed: allChecked
-                    ? () {
-                        // Ganti Navigator.pop jadi ini:
-                        Navigator.pushReplacement(
-                          context,
-                          MaterialPageRoute(
-                            builder: (context) => const ReadyToGoScreen(),
-                          ),
-                        );
-                      }
-                    : null,
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppColors.primaryBlue,
-                  disabledBackgroundColor: Colors.grey.shade300,
-                  shape: RoundedRectangleBorder(
+      body: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Padding(
+            padding: const EdgeInsets.symmetric(
+              horizontal: 24.0,
+              vertical: 16.0,
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Checklist Before You Go',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: AppColors.textPrimary,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'Tap items as you pack them. Use the icons to edit or delete.',
+                  style: TextStyle(fontSize: 14, color: Colors.grey.shade600),
+                ),
+              ],
+            ),
+          ),
+
+          Expanded(
+            child: ListView.builder(
+              padding: const EdgeInsets.symmetric(horizontal: 24),
+              itemCount: _checklistItems.length,
+              itemBuilder: (context, index) {
+                final item = _checklistItems[index];
+                final isChecked = item['isChecked'];
+
+                return Container(
+                  margin: const EdgeInsets.only(bottom: 12),
+                  padding: const EdgeInsets.only(
+                    left: 16,
+                    right: 8,
+                    top: 12,
+                    bottom: 12,
+                  ),
+                  decoration: BoxDecoration(
+                    color: isChecked
+                        ? AppColors.successGreen.withOpacity(0.08)
+                        : Colors.white,
+                    border: Border.all(
+                      color: isChecked
+                          ? AppColors.successGreen.withOpacity(0.5)
+                          : Colors.grey.shade300,
+                    ),
                     borderRadius: BorderRadius.circular(12),
                   ),
-                  elevation: 0,
-                ),
-                child: Text(
-                  'Confirm Ready',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: allChecked ? Colors.white : Colors.grey.shade500,
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.opaque,
+                          onTap: () {
+                            setState(() {
+                              _checklistItems[index]['isChecked'] = !isChecked;
+                            });
+                            _saveChecklistData();
+                          },
+                          child: Row(
+                            children: [
+                              Container(
+                                width: 24,
+                                height: 24,
+                                decoration: BoxDecoration(
+                                  shape: BoxShape.circle,
+                                  color: isChecked
+                                      ? AppColors.successGreen
+                                      : Colors.transparent,
+                                  border: Border.all(
+                                    color: isChecked
+                                        ? AppColors.successGreen
+                                        : Colors.grey.shade400,
+                                    width: 2,
+                                  ),
+                                ),
+                                child: isChecked
+                                    ? const Icon(
+                                        Icons.check,
+                                        color: Colors.white,
+                                        size: 16,
+                                      )
+                                    : null,
+                              ),
+                              const SizedBox(width: 16),
+                              Expanded(
+                                child: Text(
+                                  item['name'],
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: AppColors.textPrimary,
+                                    fontWeight: isChecked
+                                        ? FontWeight.w600
+                                        : FontWeight.normal,
+                                  ),
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+
+                      Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          GestureDetector(
+                            onTap: () => _showItemDialog(index: index),
+                            child: Padding(
+                              padding: const EdgeInsets.all(8.0),
+                              child: Icon(
+                                Icons.edit_outlined,
+                                color: Colors.grey.shade500,
+                                size: 22,
+                              ),
+                            ),
+                          ),
+                          GestureDetector(
+                            onTap: () {
+                              final deletedName =
+                                  _checklistItems[index]['name'];
+                              setState(() {
+                                _checklistItems.removeAt(index);
+                              });
+                              _saveChecklistData();
+
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text('$deletedName removed.'),
+                                  duration: const Duration(seconds: 2),
+                                  backgroundColor: Colors.redAccent,
+                                ),
+                              );
+                            },
+                            child: const Padding(
+                              padding: EdgeInsets.all(8.0),
+                              child: Icon(
+                                Icons.delete_outline,
+                                color: Colors.redAccent,
+                                size: 22,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
                   ),
-                ),
-              ),
+                );
+              },
             ),
           ),
         ],

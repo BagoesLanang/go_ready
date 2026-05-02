@@ -113,7 +113,7 @@ class _FindItemScreenState extends State<FindItemScreen> {
 
               // Title Section
               const Text(
-                'Last Known Locations',
+                'Last Known',
                 style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
@@ -122,7 +122,7 @@ class _FindItemScreenState extends State<FindItemScreen> {
               ),
               const SizedBox(height: 8),
               const Text(
-                'View the last recorded location of your items.', // Teks di-adjust biar lebih pas
+                'View the last recorded time of your items.', // Teks di-adjust biar lebih pas
                 style: TextStyle(fontSize: 14, color: AppColors.textSecondary),
               ),
               const SizedBox(height: 24),

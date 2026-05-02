@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // <-- TAMBAHIN IMPORT INI
 import '../theme/colors.dart';
 import 'login_screen.dart';
 import 'edit_profile.dart';
@@ -12,10 +13,28 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  // --- STATE VARIABLE (Awalnya Dira, ntar bisa berubah pas di-save) ---
+  // --- STATE VARIABLE (Kasih default value awal) ---
   String _userName = 'Dira';
   String _userUniv = 'UPN Veteran Yogyakarta';
   String _userBio = 'CS Student | Musician 🎸 | Skater 🛹';
+
+  @override
+  void initState() {
+    super.initState();
+    _loadProfileData(); // <-- PAS HALAMAN DIBUKA, TARIK DATA DARI MEMORI HP
+  }
+
+  // --- FUNGSI TARIK DATA DARI HARDDISK HP ---
+  Future<void> _loadProfileData() async {
+    final prefs = await SharedPreferences.getInstance();
+    setState(() {
+      // Tarik datanya, kalo di memori masih kosong (belum pernah diedit), pake nilai default
+      _userName = prefs.getString('user_name') ?? 'Dira';
+      _userUniv = prefs.getString('user_univ') ?? 'UPN Veteran Yogyakarta';
+      _userBio =
+          prefs.getString('user_bio') ?? 'CS Student | Musician 🎸 | Skater 🛹';
+    });
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -41,18 +60,6 @@ class _ProfilePageState extends State<ProfilePage> {
                   ),
                 ),
               ),
-              // Positioned(
-              //   bottom: 0,
-              //   right: 0,
-              //   child: Container(
-              //     padding: const EdgeInsets.all(10),
-              //     decoration: const BoxDecoration(
-              //       color: AppColors.primaryBlue,
-              //       shape: BoxShape.circle,
-              //     ),
-              //     child: const Icon(Icons.edit, size: 20, color: Colors.white),
-              //   ),
-              // ),
             ],
           ),
           const SizedBox(height: 24),
@@ -96,20 +103,20 @@ class _ProfilePageState extends State<ProfilePage> {
 
               // Kalo tombol save dipencet (result ngga null), langsung update UI!
               if (result != null) {
-                setState(() {
-                  _userName = result['name'];
-                  _userUniv = result['univ'];
-                  _userBio = result['bio'];
-                });
+                // Biar bener-bener akurat, kita panggil ulang penyedot data dari memori
+                await _loadProfileData();
 
-                // Munculin alert sukses
-                ScaffoldMessenger.of(context).showSnackBar(
-                  const SnackBar(
-                    content: Text('Profile updated successfully!'),
-                    backgroundColor: AppColors.successGreen,
-                    behavior: SnackBarBehavior.floating,
-                  ),
-                );
+                if (mounted) {
+                  // Munculin alert sukses (Alert dari edit profile tadi kita apus aja gapapa, atau biarin dobel juga seru)
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text('Profile UI updated! ✨'),
+                      backgroundColor: AppColors.successGreen,
+                      behavior: SnackBarBehavior.floating,
+                      duration: Duration(seconds: 2),
+                    ),
+                  );
+                }
               }
             },
           ),

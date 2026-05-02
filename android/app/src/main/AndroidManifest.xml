@@ -5,6 +5,22 @@
 <uses-permission android:name="android.permission.USE_BIOMETRIC"/>
 <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+<uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+<uses-permission android:name="android.permission.VIBRATE" />
+<!-- TAMBAHIN BLOK QUERIES INI BROK -->
+    <queries>
+        <!-- Izin buka link HTTPS (ke Google Maps Web/App) -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="https" />
+        </intent>
+        <!-- Izin buka aplikasi GPS/Maps bawaan -->
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="geo" />
+        </intent>
+    </queries>
+    <!-- BATAS TAMBAHAN -->
     <application
         android:label="goready"
         android:name="${applicationName}"
