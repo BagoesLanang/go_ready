@@ -1,4 +1,8 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<!-- Izin buat narik data API dari Internet -->
+<uses-permission android:name="android.permission.INTERNET"/>
+<!-- Izin buat pake sensor Sidik Jari / Face Unlock -->
+<uses-permission android:name="android.permission.USE_BIOMETRIC"/>
 <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
 <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
     <application
