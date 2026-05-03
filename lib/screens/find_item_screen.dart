@@ -245,14 +245,6 @@ class _FindItemScreenState extends State<FindItemScreen> {
                       color: AppColors.textPrimary,
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Last seen: $location',
-                    style: const TextStyle(
-                      fontSize: 13,
-                      color: AppColors.textSecondary,
-                    ),
-                  ),
                 ],
               ),
             ),
@@ -269,11 +261,6 @@ class _FindItemScreenState extends State<FindItemScreen> {
                   ),
                 ),
                 const SizedBox(height: 8),
-                const Icon(
-                  Icons.location_on_outlined,
-                  color: AppColors.dangerRed,
-                  size: 24,
-                ),
               ],
             ),
           ],

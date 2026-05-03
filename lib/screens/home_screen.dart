@@ -49,15 +49,6 @@ class HomeScreen extends StatelessWidget {
                     fontWeight: FontWeight.bold,
                   ),
                 ),
-                IconButton(
-                  icon: const Icon(
-                    Icons.notifications_none_outlined,
-                    color: AppColors.primaryBlue,
-                  ),
-                  onPressed: () {
-                    // nanti bisa dipake notif backend
-                  },
-                ),
               ],
             ),
 

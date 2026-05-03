@@ -31,7 +31,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     // Inject persona asisten ke Gemini pake systemInstruction
     _model = GenerativeModel(
       model: 'gemini-2.5-flash',
-      apiKey: 'AIzaSyB9zHHHSktaPSfu4fcNBjRg5U9-Y5raod0',
+      apiKey: 'AIzaSyAWfeALDIleYqp8R9twkKmV_77uFaQOcmo',
       systemInstruction: Content.system(
         'Kamu adalah asisten pintar untuk rekomendasi barang bawaan. '
         'Kamu hanya boleh menjawab hal yang berkaitan dengan packing, barang bawaan, outfit traveling, persiapan pergi, saran barang. '
