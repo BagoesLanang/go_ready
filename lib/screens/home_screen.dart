@@ -4,6 +4,7 @@ import 'checklist_screen.dart';
 import 'find_item_screen.dart';
 import 'mini_game_screen.dart';
 import 'nearby_page.dart';
+import 'chatbot_screen.dart'; // 🔥 IMPORT SCREEN CHATBOT LU DI SINI
 
 class HomeScreen extends StatelessWidget {
   final Function(int)? onNavigate;
@@ -12,193 +13,213 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SingleChildScrollView(
-      padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          // 🔥 HEADER (AMBIL DARI BACKEND LU BIAR ADA NOTIF)
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              const Text(
-                'GoReady',
-                style: TextStyle(
-                  color: AppColors.primaryBlue,
-                  fontSize: 20,
-                  fontWeight: FontWeight.bold,
+    // 🔥 BUNGKUS PAKE SCAFFOLD BIAR BISA NAMBAHIN TOMBOL MENGAPUNG (FAB)
+    return Scaffold(
+      backgroundColor: Colors.transparent, // Biar background asli nggak rusak
+      
+      // 🔥 INI TOMBOL CHATBOT-NYA BROK
+      floatingActionButton: FloatingActionButton(
+        heroTag: "homeChatbotBtn", // PENTING: Biar gak bentrok hero tag-nya
+        onPressed: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (context) => const ChatbotScreen()),
+          );
+        },
+        backgroundColor: const Color(0xFFD97706), // Warna gold/orange biar elegan
+        elevation: 4,
+        child: const Icon(Icons.auto_awesome, color: Colors.white),
+      ),
+      
+      // 🔥 BODY-NYA TETEP SAMA PERSIS KAYA PUNYA LU
+      body: SingleChildScrollView(
+        padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // 🔥 HEADER
+            Row(
+              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+              children: [
+                const Text(
+                  'GoReady',
+                  style: TextStyle(
+                    color: AppColors.primaryBlue,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold,
+                  ),
                 ),
-              ),
-              IconButton(
-                icon: const Icon(
-                  Icons.notifications_none_outlined,
-                  color: AppColors.primaryBlue,
-                ),
-                onPressed: () {
-                  // nanti bisa dipake notif backend
-                },
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 24),
-
-          const Text(
-            'Hello,',
-            style: TextStyle(fontSize: 18, color: AppColors.textSecondary),
-          ),
-
-          const Text(
-            'Ready to go?',
-            style: TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
-            ),
-          ),
-
-          const SizedBox(height: 32),
-
-          // 🔥 BUTTON 1 (TETAP)
-          _buildBigActionCard(
-            title: "I'm Going Out",
-            subtitle: "Start your preparation flow",
-            color: AppColors.successGreen,
-            icon: Icons.directions_run_rounded,
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const ChecklistScreen(),
-                ),
-              );
-            },
-          ),
-
-          const SizedBox(height: 16),
-
-          // 🔥 BUTTON 2 (SEDIKIT DI FIX BIAR LEBIH MASUK)
-          _buildBigActionCard(
-            title: "I Forgot Something",
-            subtitle: "Quick search & rescue", // 🔥 dari lu (lebih cocok)
-            color: AppColors.primaryBlue,
-            icon: Icons.search_rounded, // 🔥 balik ke search (lebih make sense)
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const FindItemScreen(),
-                ),
-              );
-            },
-          ),
-
-          const SizedBox(height: 32),
-
-          const Text(
-            'QUICK ACCESS',
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.bold,
-              letterSpacing: 1.2,
-              color: AppColors.textSecondary,
-            ),
-          ),
-
-          const SizedBox(height: 16),
-
-          Row(
-            children: [
-              Expanded(
-                child: _buildSmallActionCard(
-                  title: "Nearby Locations",
-                  icon: Icons.near_me_outlined,
-                  onTap: () {
-                    if (onNavigate != null) {
-                      onNavigate!(2);
-                    }
+                IconButton(
+                  icon: const Icon(
+                    Icons.notifications_none_outlined,
+                    color: AppColors.primaryBlue,
+                  ),
+                  onPressed: () {
+                    // nanti bisa dipake notif backend
                   },
                 ),
-              ),
+              ],
+            ),
 
-              const SizedBox(width: 16),
+            const SizedBox(height: 24),
 
-              // 🔥 OPTIONAL: kalau mau balikin History tab tinggal aktifin ini
-              /*
-              Expanded(
-                child: _buildSmallActionCard(
-                  title: "History",
-                  icon: Icons.history,
-                  onTap: () {
-                    if (onNavigate != null) {
-                      onNavigate!(1);
-                    }
-                  },
-                ),
-              ),
-              */
-            ],
-          ),
+            const Text(
+              'Hello,',
+              style: TextStyle(fontSize: 18, color: AppColors.textSecondary),
+            ),
 
-          const SizedBox(height: 16),
-
-          // 🔥 MINI GAME (TETAP)
-          GestureDetector(
-            onTap: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (context) => const MiniGameScreen(),
-                ),
-              );
-            },
-            child: Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF3C090).withOpacity(0.4),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              child: Row(
-                children: [
-                  Container(
-                    padding: const EdgeInsets.all(12),
-                    decoration: const BoxDecoration(
-                      color: Color(0xFFF3C090),
-                      shape: BoxShape.circle,
-                    ),
-                    child: const Icon(
-                      Icons.sports_esports,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  const Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Mini Game',
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          fontSize: 16,
-                          color: Color(0xFF8B5A2B),
-                        ),
-                      ),
-                      Text(
-                        'Kill time while waiting',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: Color(0xFF8B5A2B),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
+            const Text(
+              'Ready to go?',
+              style: TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                color: AppColors.textPrimary,
               ),
             ),
-          ),
 
-          const SizedBox(height: 24),
-        ],
+            const SizedBox(height: 32),
+
+            // 🔥 BUTTON 1 (TETAP)
+            _buildBigActionCard(
+              title: "I'm Going Out",
+              subtitle: "Start your preparation flow",
+              color: AppColors.successGreen,
+              icon: Icons.directions_run_rounded,
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const ChecklistScreen(),
+                  ),
+                );
+              },
+            ),
+
+            const SizedBox(height: 16),
+
+            // 🔥 BUTTON 2 
+            _buildBigActionCard(
+              title: "I Forgot Something",
+              subtitle: "Quick search & rescue", 
+              color: AppColors.primaryBlue,
+              icon: Icons.search_rounded, 
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const FindItemScreen(),
+                  ),
+                );
+              },
+            ),
+
+            const SizedBox(height: 32),
+
+            const Text(
+              'QUICK ACCESS',
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.bold,
+                letterSpacing: 1.2,
+                color: AppColors.textSecondary,
+              ),
+            ),
+
+            const SizedBox(height: 16),
+
+            Row(
+              children: [
+                Expanded(
+                  child: _buildSmallActionCard(
+                    title: "Nearby Locations",
+                    icon: Icons.near_me_outlined,
+                    onTap: () {
+                      if (onNavigate != null) {
+                        onNavigate!(2);
+                      }
+                    },
+                  ),
+                ),
+
+                const SizedBox(width: 16),
+
+                // 🔥 OPTIONAL: kalau mau balikin History tab tinggal aktifin ini
+                /*
+                Expanded(
+                  child: _buildSmallActionCard(
+                    title: "History",
+                    icon: Icons.history,
+                    onTap: () {
+                      if (onNavigate != null) {
+                        onNavigate!(1);
+                      }
+                    },
+                  ),
+                ),
+                */
+              ],
+            ),
+
+            const SizedBox(height: 16),
+
+            // 🔥 MINI GAME (TETAP)
+            GestureDetector(
+              onTap: () {
+                Navigator.push(
+                  context,
+                  MaterialPageRoute(
+                    builder: (context) => const MiniGameScreen(),
+                  ),
+                );
+              },
+              child: Container(
+                padding: const EdgeInsets.all(16),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFF3C090).withOpacity(0.4),
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                child: Row(
+                  children: [
+                    Container(
+                      padding: const EdgeInsets.all(12),
+                      decoration: const BoxDecoration(
+                        color: Color(0xFFF3C090),
+                        shape: BoxShape.circle,
+                      ),
+                      child: const Icon(
+                        Icons.sports_esports,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    const Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          'Mini Game',
+                          style: TextStyle(
+                            fontWeight: FontWeight.bold,
+                            fontSize: 16,
+                            color: Color(0xFF8B5A2B),
+                          ),
+                        ),
+                        Text(
+                          'Kill time while waiting',
+                          style: TextStyle(
+                            fontSize: 12,
+                            color: Color(0xFF8B5A2B),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                ),
+              ),
+            ),
+
+            const SizedBox(height: 24),
+          ],
+        ),
       ),
     );
   }

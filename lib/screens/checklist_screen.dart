@@ -38,24 +38,19 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
   // --- LOGIC CRUD 1: LOAD & SAVE DARI MEMORI HP ---
   Future<void> _loadChecklistData() async {
     final prefs = await SharedPreferences.getInstance();
-    final String? savedData = prefs.getString('my_checklist');
 
-    if (savedData != null) {
-      setState(() {
-        _checklistItems = List<Map<String, dynamic>>.from(
-          json.decode(savedData),
-        );
-      });
-    } else {
-      setState(() {
-        _checklistItems = [
-          {'id': '1', 'name': 'Wallet', 'isChecked': false},
-          {'id': '2', 'name': 'Phone', 'isChecked': false},
-          {'id': '3', 'name': 'Charger', 'isChecked': false},
-          {'id': '4', 'name': 'Keys', 'isChecked': false},
-        ];
-      });
-    }
+    // 🔥 FIX: Selalu reset ke default tiap kali screen dibuka atau ganti akun
+    setState(() {
+      _checklistItems = [
+        {'id': '1', 'name': 'Wallet', 'isChecked': false},
+        {'id': '2', 'name': 'Phone', 'isChecked': false},
+        {'id': '3', 'name': 'Charger', 'isChecked': false},
+        {'id': '4', 'name': 'Keys', 'isChecked': false},
+      ];
+    });
+
+    // Timpa data lama di SharedPreferences biar bener-bener clean
+    await prefs.setString('my_checklist', json.encode(_checklistItems));
   }
 
   Future<void> _saveChecklistData() async {
@@ -125,23 +120,20 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                 );
 
                 if (index != null) {
-                  // Kalo lagi ngedit: pastiin dia nggak ganti nama jadi barang yang udah ada
                   String currentName = _checklistItems[index]['name']
                       .toString()
                       .toLowerCase();
                   if (isDuplicate && newItemName.toLowerCase() != currentName) {
                     _showDuplicateError(newItemName);
-                    return; // Stop, jangan disave!
+                    return;
                   }
                 } else {
-                  // Kalo lagi nambah baru: pastiin belom ada
                   if (isDuplicate) {
                     _showDuplicateError(newItemName);
-                    return; // Stop, jangan disave!
+                    return;
                   }
                 }
 
-                // Kalo aman (nggak duplikat), baru lanjut save
                 setState(() {
                   if (index != null) {
                     _checklistItems[index]['name'] = newItemName;
@@ -154,7 +146,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                   }
                 });
                 _saveChecklistData();
-                Navigator.pop(context); // Tutup dialognya
+                Navigator.pop(context);
               }
             },
             style: ElevatedButton.styleFrom(
@@ -185,7 +177,6 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
         ?.requestNotificationsPermission();
   }
 
-  // LOGIC SENSOR REVISI: LEBIH SENSITIF TAPI ANTI TREMOR
   void _startListeningToSensor() {
     _accelerometerSubscription = userAccelerometerEventStream().listen((
       UserAccelerometerEvent event,
@@ -194,22 +185,18 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
         pow(event.x, 2) + pow(event.y, 2) + pow(event.z, 2),
       );
 
-      // THRESHOLD TURUN JADI 1.5 (Jalan biasa di kantong tetep kebaca)
       if (acceleration > 1.5) {
         DateTime now = DateTime.now();
         int timeDifference = now.difference(_lastStepTime).inMilliseconds;
 
-        // Reset kalo diem lebih dari 3 detik
         if (timeDifference > 3000) {
           _stepCounter = 0;
         }
 
-        // Filter tremor: Jeda tiap langkah minimal 400ms
         if (timeDifference > 400) {
           _stepCounter++;
           _lastStepTime = now;
 
-          // TURUNIN JADI 7 LANGKAH (Biar gampang ngetestnya)
           if (_stepCounter >= 7) {
             _evaluateChecklistAndNotify();
             _stepCounter = 0;
@@ -301,9 +288,8 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
           child: SizedBox(
             height: 54,
             child: ElevatedButton(
-              // 🔥 LOGIC DB BACKEND LU DI-INJECT KE SINI BROK 🔥
+              // 🔥 LOGIC DB BACKEND LU DI SINI
               onPressed: () async {
-                // Kumpulin barang yang udah dicentang
                 List<String> selectedItems = [];
                 for (var item in _checklistItems) {
                   if (item['isChecked'] == true) {
@@ -311,10 +297,8 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
                   }
                 }
 
-                // Tembak API lu bre
                 await saveTrip(selectedItems);
 
-                // Baru pindah halaman
                 if (context.mounted) {
                   Navigator.pushReplacement(
                     context,

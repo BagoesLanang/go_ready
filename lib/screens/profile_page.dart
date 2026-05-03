@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // <-- TAMBAHIN IMPORT INI
+import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/colors.dart';
+import '../utils/user_session.dart';
 import 'login_screen.dart';
 import 'edit_profile.dart';
 import 'biometric_setup.dart';
@@ -13,26 +14,31 @@ class ProfilePage extends StatefulWidget {
 }
 
 class _ProfilePageState extends State<ProfilePage> {
-  // --- STATE VARIABLE (Kasih default value awal) ---
-  String _userName = 'Dira';
-  String _userUniv = 'UPN Veteran Yogyakarta';
-  String _userBio = 'CS Student | Musician 🎸 | Skater 🛹';
+  String _userName = ' ';
+  String _userUniv = ' ';
+  String _userBio = ' ';
 
   @override
   void initState() {
     super.initState();
-    _loadProfileData(); // <-- PAS HALAMAN DIBUKA, TARIK DATA DARI MEMORI HP
+    _loadProfileData(); 
   }
 
-  // --- FUNGSI TARIK DATA DARI HARDDISK HP ---
+  // --- FUNGSI TARIK DATA (CARI LACI SESUAI USER ID) ---
   Future<void> _loadProfileData() async {
     final prefs = await SharedPreferences.getInstance();
+    
+    // 1. Bikin uniqueId-nya dulu di sini ngambil dari memori HP
+    final String uniqueId = prefs.getString('user_id') ?? prefs.getString('user_name') ?? 'unknown_user';
+    
+    // 2. Siapin default name-nya
+    final String defaultName = prefs.getString('user_name') ?? 'Guest User';
+
     setState(() {
-      // Tarik datanya, kalo di memori masih kosong (belum pernah diedit), pake nilai default
-      _userName = prefs.getString('user_name') ?? 'Dira';
-      _userUniv = prefs.getString('user_univ') ?? 'UPN Veteran Yogyakarta';
-      _userBio =
-          prefs.getString('user_bio') ?? 'CS Student | Musician 🎸 | Skater 🛹';
+      // 3. Update semua UI pake laci yang udah spesifik per user
+      _userName = prefs.getString('user_name_$uniqueId') ?? defaultName;
+      _userUniv = prefs.getString('user_univ_$uniqueId') ?? '';
+      _userBio = prefs.getString('user_bio_$uniqueId') ?? '';
     });
   }
 
@@ -44,7 +50,6 @@ class _ProfilePageState extends State<ProfilePage> {
         crossAxisAlignment: CrossAxisAlignment.center,
         children: [
           const SizedBox(height: 24),
-
           Stack(
             children: [
               Container(
@@ -63,33 +68,21 @@ class _ProfilePageState extends State<ProfilePage> {
             ],
           ),
           const SizedBox(height: 24),
-
-          // --- NAMA & BIO YANG BISA BERUBAH ---
           Text(
             _userName,
-            style: const TextStyle(
-              fontSize: 24,
-              fontWeight: FontWeight.bold,
-              color: AppColors.textPrimary,
-            ),
+            style: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
           ),
           const SizedBox(height: 8),
           Text(
             '$_userUniv\n$_userBio',
             textAlign: TextAlign.center,
-            style: const TextStyle(
-              fontSize: 14,
-              color: AppColors.textSecondary,
-              height: 1.5,
-            ),
+            style: const TextStyle(fontSize: 14, color: AppColors.textSecondary, height: 1.5),
           ),
           const SizedBox(height: 40),
-
           _buildProfileMenu(
             icon: Icons.person_outline,
             title: 'Edit Profile',
             onTap: () async {
-              // Tungguin data dari halaman Edit Profile
               final result = await Navigator.push(
                 context,
                 MaterialPageRoute(
@@ -101,13 +94,9 @@ class _ProfilePageState extends State<ProfilePage> {
                 ),
               );
 
-              // Kalo tombol save dipencet (result ngga null), langsung update UI!
               if (result != null) {
-                // Biar bener-bener akurat, kita panggil ulang penyedot data dari memori
                 await _loadProfileData();
-
                 if (mounted) {
-                  // Munculin alert sukses (Alert dari edit profile tadi kita apus aja gapapa, atau biarin dobel juga seru)
                   ScaffoldMessenger.of(context).showSnackBar(
                     const SnackBar(
                       content: Text('Profile UI updated! ✨'),
@@ -120,26 +109,30 @@ class _ProfilePageState extends State<ProfilePage> {
               }
             },
           ),
-
           _buildProfileMenu(
             icon: Icons.fingerprint,
             title: 'Biometric Login Setup',
             onTap: () {
               Navigator.push(
                 context,
-                MaterialPageRoute(
-                  builder: (context) => const BiometricSetupPage(),
-                ),
+                MaterialPageRoute(builder: (context) => const BiometricSetupPage()),
               );
             },
           ),
-
           const SizedBox(height: 32),
-
           SizedBox(
             width: double.infinity,
             child: OutlinedButton.icon(
-              onPressed: () {
+              onPressed: () async {
+                final prefs = await SharedPreferences.getInstance();
+                
+                // LOGIC LOGOUT HARUS AMAN DARI NGEHAPUS DATA LOKAL (Biar ngga reset)
+                await prefs.remove('user_id'); 
+                await prefs.remove('user_name'); 
+                // Catatan: KITA NGGA NGEHAPUS 'user_name_123', 'user_bio_123' biar pas Dira balik login, bio-nya tetep ada.
+                
+                UserSession.clear();
+
                 Navigator.pushAndRemoveUntil(
                   context,
                   MaterialPageRoute(builder: (context) => const LoginScreen()),
@@ -149,17 +142,12 @@ class _ProfilePageState extends State<ProfilePage> {
               icon: const Icon(Icons.logout, color: AppColors.dangerRed),
               label: const Text(
                 'Log Out',
-                style: TextStyle(
-                  color: AppColors.dangerRed,
-                  fontWeight: FontWeight.bold,
-                ),
+                style: TextStyle(color: AppColors.dangerRed, fontWeight: FontWeight.bold),
               ),
               style: OutlinedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 side: const BorderSide(color: AppColors.dangerRed),
-                shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(12),
-                ),
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
               ),
             ),
           ),
@@ -169,11 +157,7 @@ class _ProfilePageState extends State<ProfilePage> {
     );
   }
 
-  Widget _buildProfileMenu({
-    required IconData icon,
-    required String title,
-    required VoidCallback onTap,
-  }) {
+  Widget _buildProfileMenu({required IconData icon, required String title, required VoidCallback onTap}) {
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       child: ListTile(
@@ -190,16 +174,9 @@ class _ProfilePageState extends State<ProfilePage> {
         ),
         title: Text(
           title,
-          style: const TextStyle(
-            fontWeight: FontWeight.w600,
-            color: AppColors.textPrimary,
-          ),
+          style: const TextStyle(fontWeight: FontWeight.w600, color: AppColors.textPrimary),
         ),
-        trailing: const Icon(
-          Icons.arrow_forward_ios,
-          size: 16,
-          color: AppColors.textSecondary,
-        ),
+        trailing: const Icon(Icons.arrow_forward_ios, size: 16, color: AppColors.textSecondary),
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 4),
       ),
     );

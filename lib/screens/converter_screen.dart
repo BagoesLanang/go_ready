@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
+import 'dart:convert'; // Buat parse JSON dari API
+import 'package:http/http.dart' as http; // Buat fetch API
 import 'package:intl/intl.dart';
 import '../theme/colors.dart';
 
@@ -62,12 +64,51 @@ class _CurrencyTabState extends State<_CurrencyTab> {
   String _toCurrency = 'USD';
   double _result = 0.0;
 
-  // Dummy exchange rates (Base: IDR)
-  final Map<String, double> _rates = {
+  // Nilai default ini otomatis bakal ketimpa sama API.
+  // Format rasionya disesuaikan jadi "Berapa nilainya untuk 1 IDR" (karena base-nya IDR)
+  Map<String, double> _rates = {
     'IDR': 1.0,
-    'USD': 16000.0, // 1 USD = 16.000 IDR
-    'JPY': 105.0, // 1 JPY = 105 IDR
+    'USD': 0.0000625, // Fallback jika no internet: 1 / 16000
+    'JPY': 0.0095238, // Fallback jika no internet: 1 / 105
   };
+
+  // --- TARUH API KEY EXCHANGE-RATE API LU DI SINI ---
+  final String apiKey = 'a2ea9c585fc2d09231d5c50a';
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchRates(); // Panggil API pas halamannya pertama kali dibuka
+  }
+
+  // Logic buat narik data mata uang real-time
+  Future<void> _fetchRates() async {
+    // Kita set IDR sebagai base currency biar gampang
+    final url = Uri.parse(
+      'https://v6.exchangerate-api.com/v6/$apiKey/latest/IDR',
+    );
+
+    try {
+      final response = await http.get(url);
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final conversionRates =
+            data['conversion_rates'] as Map<String, dynamic>;
+
+        if (mounted) {
+          setState(() {
+            _rates['IDR'] = (conversionRates['IDR'] ?? 1.0).toDouble();
+            _rates['USD'] = (conversionRates['USD'] ?? 0.0000625).toDouble();
+            _rates['JPY'] = (conversionRates['JPY'] ?? 0.0095238).toDouble();
+            _convert(); // Langsung re-calculate hasil kalo user udah ngetik duluan
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetch API: $e');
+      // Kalo error/gak ada internet, aplikasi ga bakal crash dan tetep pake fallback rate di atas
+    }
+  }
 
   void _convert() {
     double amount = double.tryParse(_amountController.text) ?? 0.0;
@@ -76,9 +117,10 @@ class _CurrencyTabState extends State<_CurrencyTab> {
       return;
     }
 
-    // Logic: Convert ke IDR dulu, baru convert ke target mata uang
-    double baseToIdr = amount * _rates[_fromCurrency]!;
-    double finalResult = baseToIdr / _rates[_toCurrency]!;
+    // Logic diupdate: Bagi dengan rate FromCurrency buat nyari nilai Base(IDR),
+    // terus dikali rate ToCurrency buat dapet hasil akhir.
+    double amountInBaseIdr = amount / _rates[_fromCurrency]!;
+    double finalResult = amountInBaseIdr * _rates[_toCurrency]!;
 
     setState(() {
       _result = finalResult;

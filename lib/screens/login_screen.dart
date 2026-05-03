@@ -45,38 +45,16 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _loginWithBiometrics() async {
-    if (!_isBiometricEnabled) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-              'Lu belum aktifin sidik jari brok! Login manual dulu ya.'),
-          backgroundColor: Colors.orange,
-        ),
-      );
-      return;
-    }
+    if (!_isBiometricEnabled) return;
 
-    bool authenticated = false;
+    final canCheck = await auth.canCheckBiometrics;
+    final supported = canCheck || await auth.isDeviceSupported();
 
-    try {
-      final bool canCheck = await auth.canCheckBiometrics;
-      final bool supported = canCheck || await auth.isDeviceSupported();
+    if (!supported) return;
 
-      if (!supported) return;
-
-      authenticated = await auth.authenticate(
-        localizedReason: 'Scan sidik jari / Face ID buat masuk',
-      );
-    } on PlatformException catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text('Error hardware: ${e.message}'),
-          backgroundColor: Colors.red,
-        ),
-      );
-      return;
-    }
+    final authenticated = await auth.authenticate(
+      localizedReason: 'Scan sidik jari / Face ID buat masuk',
+    );
 
     if (!mounted) return;
 
@@ -116,8 +94,11 @@ class _LoginScreenState extends State<LoginScreen> {
         UserSession.userId = user['id'];
 
         // 🔥 SIMPAN KE LOCAL
+        // 🔥 SIMPAN KE LOCAL
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setInt('user_id', user['id']);
+        await prefs.setString('user_id', user['id'].toString()); // ID-nya kita jadiin String biar aman nyambungnya
+        await prefs.setString('user_name', user['name'] ?? 'Guest User'); // Disimpen di laci umum (buat fallback)
+        await prefs.setString('user_name_${user['id']}', user['name'] ?? 'Guest User'); // DISIMPEN DI LACI SPESIFIK (Ini yang paling penting!)
 
         Navigator.pushReplacement(
           context,
@@ -130,9 +111,9 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       print("ERROR LOGIN: $e");
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Gagal koneksi ke server")),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text("Gagal koneksi ke server")));
     }
   }
 
@@ -142,8 +123,7 @@ class _LoginScreenState extends State<LoginScreen> {
       backgroundColor: const Color(0xFFF8F9FA),
       body: SafeArea(
         child: SingleChildScrollView(
-          padding:
-              const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40.0),
+          padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 40.0),
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
@@ -154,8 +134,11 @@ class _LoginScreenState extends State<LoginScreen> {
                   'assets/images/logofix.png',
                   height: 100,
                   errorBuilder: (context, error, stackTrace) {
-                    return const Icon(Icons.broken_image,
-                        size: 80, color: Colors.grey);
+                    return const Icon(
+                      Icons.broken_image,
+                      size: 80,
+                      color: Colors.grey,
+                    );
                   },
                 ),
               ),
@@ -184,8 +167,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
               const SizedBox(height: 48),
 
-              const Text('Email Address',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text(
+                'Email Address',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 8),
 
               TextField(
@@ -204,8 +189,10 @@ class _LoginScreenState extends State<LoginScreen> {
 
               const SizedBox(height: 24),
 
-              const Text('Password',
-                  style: TextStyle(fontWeight: FontWeight.bold)),
+              const Text(
+                'Password',
+                style: TextStyle(fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 8),
 
               TextField(
@@ -247,8 +234,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       },
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF0056D2),
-                        padding:
-                            const EdgeInsets.symmetric(vertical: 16),
+                        padding: const EdgeInsets.symmetric(vertical: 16),
                         shape: RoundedRectangleBorder(
                           borderRadius: BorderRadius.circular(12),
                         ),
@@ -262,19 +248,22 @@ class _LoginScreenState extends State<LoginScreen> {
 
                   const SizedBox(width: 12),
 
-                  // 🔥 BIOMETRIC (TETAP)
-                  if (_isBiometricEnabled)
-                    Container(
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF0056D2),
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      child: IconButton(
-                        onPressed: _loginWithBiometrics,
-                        icon: const Icon(Icons.fingerprint,
-                            color: Colors.white, size: 28),
-                      ),
+                  // 🔥 BIOMETRIC (TETAP) 
+                  Container(
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF0056D2),
+                      borderRadius: BorderRadius.circular(12),
                     ),
+                    child: IconButton(
+                      onPressed: _loginWithBiometrics,
+                      icon: const Icon(
+                        Icons.face_retouching_natural,
+                        color: Colors.white,
+                        size: 28,
+                      ),
+                      padding: const EdgeInsets.all(12),
+                    ),
+                  ),
                 ],
               ),
 
@@ -288,8 +277,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     onTap: () => Navigator.push(
                       context,
                       MaterialPageRoute(
-                        builder: (context) =>
-                            const RegisterScreen(),
+                        builder: (context) => const RegisterScreen(),
                       ),
                     ),
                     child: const Text(

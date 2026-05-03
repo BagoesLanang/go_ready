@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // <-- WAJIB IMPORT INI
+import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/colors.dart';
+import '../utils/user_session.dart'; // <-- Panggil session buat tau siapa yg login
 
 class EditProfilePage extends StatefulWidget {
   final String currentName;
@@ -26,7 +27,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
   @override
   void initState() {
     super.initState();
-    // Masukin data lama ke dalam form input
     _nameController = TextEditingController(text: widget.currentName);
     _univController = TextEditingController(text: widget.currentUniv);
     _bioController = TextEditingController(text: widget.currentBio);
@@ -40,18 +40,19 @@ class _EditProfilePageState extends State<EditProfilePage> {
     super.dispose();
   }
 
-  // --- FUNGSI SAVE KE MEMORI HP ---
+  // --- FUNGSI SAVE KE MEMORI HP (DENGAN KUNCI UNIK) ---
   Future<void> _saveProfile() async {
-    // Panggil memori lokal HP
     final prefs = await SharedPreferences.getInstance();
+    
+    // Ambil ID user yang lagi login biar lacinya ngga ketuker
+    final String uniqueId = prefs.getString('user_id') ?? prefs.getString('user_name') ?? 'unknown_user';
 
-    // Simpan ketikan terbaru ke harddisk HP
-    await prefs.setString('user_name', _nameController.text);
-    await prefs.setString('user_univ', _univController.text);
-    await prefs.setString('user_bio', _bioController.text);
+    // Simpan ketikan terbaru pake ID sebagai akhiran namanya (PENTING!)
+    await prefs.setString('user_name_$uniqueId', _nameController.text);
+    await prefs.setString('user_univ_$uniqueId', _univController.text);
+    await prefs.setString('user_bio_$uniqueId', _bioController.text);
 
     if (mounted) {
-      // Munculin notif pop-up ijo biar UX-nya dapet
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Profile changes saved! 🚀'),
@@ -60,7 +61,6 @@ class _EditProfilePageState extends State<EditProfilePage> {
         ),
       );
 
-      // Lempar balik data ke halaman profil biar UI depan langsung update
       Navigator.pop(context, {
         'name': _nameController.text,
         'univ': _univController.text,
@@ -77,18 +77,12 @@ class _EditProfilePageState extends State<EditProfilePage> {
         backgroundColor: Colors.white,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(
-            Icons.arrow_back_ios_new,
-            color: AppColors.primaryBlue,
-          ),
+          icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.primaryBlue),
           onPressed: () => Navigator.pop(context),
         ),
         title: const Text(
           'Edit Profile',
-          style: TextStyle(
-            color: AppColors.textPrimary,
-            fontWeight: FontWeight.bold,
-          ),
+          style: TextStyle(color: AppColors.textPrimary, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
       ),
@@ -97,39 +91,24 @@ class _EditProfilePageState extends State<EditProfilePage> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // --- BUNDERAN PP UDAH DIHILANGKAN TOTAL ---
-
-            // --- FORM INPUT ---
             _buildTextField(label: 'Full Name', controller: _nameController),
             const SizedBox(height: 16),
             _buildTextField(label: 'University', controller: _univController),
             const SizedBox(height: 16),
-            _buildTextField(
-              label: 'Bio',
-              controller: _bioController,
-              maxLines: 3,
-            ),
+            _buildTextField(label: 'Bio', controller: _bioController, maxLines: 3),
             const SizedBox(height: 40),
-
-            // --- TOMBOL SAVE ---
             SizedBox(
               width: double.infinity,
               height: 50,
               child: ElevatedButton(
-                onPressed: _saveProfile, // <-- PANGGIL FUNGSI SAVE DI SINI
+                onPressed: _saveProfile,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primaryBlue,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(12),
-                  ),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
                 ),
                 child: const Text(
                   'Save Changes',
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+                  style: TextStyle(fontSize: 16, fontWeight: FontWeight.bold, color: Colors.white),
                 ),
               ),
             ),
@@ -139,21 +118,13 @@ class _EditProfilePageState extends State<EditProfilePage> {
     );
   }
 
-  Widget _buildTextField({
-    required String label,
-    required TextEditingController controller,
-    int maxLines = 1,
-  }) {
+  Widget _buildTextField({required String label, required TextEditingController controller, int maxLines = 1}) {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 14,
-            fontWeight: FontWeight.bold,
-            color: AppColors.textSecondary,
-          ),
+          style: const TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: AppColors.textSecondary),
         ),
         const SizedBox(height: 8),
         TextField(
@@ -162,10 +133,7 @@ class _EditProfilePageState extends State<EditProfilePage> {
           decoration: InputDecoration(
             filled: true,
             fillColor: Colors.white,
-            border: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(12),
-              borderSide: BorderSide.none,
-            ),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: BorderSide.none),
             focusedBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(12),
               borderSide: const BorderSide(color: AppColors.primaryBlue),

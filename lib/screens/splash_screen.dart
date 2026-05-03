@@ -16,22 +16,20 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    checkLogin();
+    _checkLogin();
   }
 
-  Future<void> checkLogin() async {
+  Future<void> _checkLogin() async {
+    await Future.delayed(const Duration(seconds: 2)); // biar keliatan splash
+
     final prefs = await SharedPreferences.getInstance();
-    final userId = prefs.getInt('user_id');
+    
+    // 🔥 BAGIAN YANG DIGANTI: Panggilnya pake getString
+    final String? userIdRaw = prefs.getString('user_id');
 
-    print("AUTO LOGIN CHECK: $userId");
-
-    await Future.delayed(const Duration(seconds: 2)); // biar smooth
-
-    if (!mounted) return;
-
-    if (userId != null) {
-      // 🔥 SET SESSION LAGI
-      UserSession.userId = userId;
+    if (userIdRaw != null) {
+      // 🔥 BAGIAN YANG DIGANTI: Convert teks jadi angka
+      UserSession.userId = int.tryParse(userIdRaw);
 
       Navigator.pushReplacement(
         context,
@@ -47,9 +45,13 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8F9FA),
       body: Center(
-        child: CircularProgressIndicator(),
+        child: Image.asset(
+          'assets/images/logo.png',
+          width: 420,
+        ),
       ),
     );
   }
