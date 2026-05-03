@@ -20,7 +20,7 @@ class ConverterScreen extends StatelessWidget {
           elevation: 0,
           centerTitle: true,
           title: const Text(
-            'GoReady',
+            'Converter',
             style: TextStyle(
               color: AppColors.primaryBlue,
               fontWeight: FontWeight.bold,

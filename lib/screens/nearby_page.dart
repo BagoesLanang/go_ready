@@ -183,10 +183,6 @@ class _NearbyPageState extends State<NearbyPage> {
           style: TextStyle(color: Colors.black87, fontWeight: FontWeight.bold),
         ),
         centerTitle: true,
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: Color(0xFF0056D2)),
-          onPressed: () => Navigator.pop(context),
-        ),
       ),
       body: _userLocation == null
           ? const Center(

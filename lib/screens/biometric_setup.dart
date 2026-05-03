@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
-import 'package:shared_preferences/shared_preferences.dart'; // Import package baru
+import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart'; // 🔥 IMPORT BRANKAS
+
 import '../theme/colors.dart';
 
 class BiometricSetupPage extends StatefulWidget {
@@ -16,41 +18,98 @@ class _BiometricSetupPageState extends State<BiometricSetupPage> {
   bool _isBiometricEnabled = false;
 
   final LocalAuthentication auth = LocalAuthentication();
+  final FlutterSecureStorage secureStorage = const FlutterSecureStorage(); // 🔥 INIT BRANKAS
 
   @override
   void initState() {
     super.initState();
-    _loadBiometricStatus(); // Cek memori pas halaman dibuka
+    _loadBiometricStatus(); 
   }
 
   // --- LOGIC BACA MEMORI HP ---
   Future<void> _loadBiometricStatus() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
-      // Kalo ngga ada catetan, default-nya false
       _isRegistered = prefs.getBool('biometric_enabled') ?? false;
       _isBiometricEnabled = _isRegistered;
     });
   }
 
-  // --- LOGIC DAFTAR & SIMPEN KE MEMORI ---
-  Future<void> _registerRealBiometric() async {
-    bool authenticated = false;
-    
-    try {
-      final bool canAuthenticateWithBiometrics = await auth.canCheckBiometrics;
-      final bool canAuthenticate = canAuthenticateWithBiometrics || await auth.isDeviceSupported();
+  // --- POP UP BUAT MINTA DATA SEBELUM DISIMPEN KE BRANKAS ---
+  Future<Map<String, String>?> _showCredentialDialog() async {
+    TextEditingController emailController = TextEditingController();
+    TextEditingController passwordController = TextEditingController();
 
-      if (!canAuthenticate) {
-        if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Maaf, HP ini ngga support fitur biometrik.'), backgroundColor: Colors.redAccent),
+    return showDialog<Map<String, String>>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) {
+        return AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+          title: const Text('Konfirmasi Akun', style: TextStyle(fontWeight: FontWeight.bold)),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text('Masukkan email dan password akun yang mau dihubungkan dengan sidik jari ini.', style: TextStyle(fontSize: 14)),
+              const SizedBox(height: 16),
+              TextField(
+                controller: emailController,
+                decoration: const InputDecoration(labelText: 'Email', border: OutlineInputBorder()),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: passwordController,
+                obscureText: true,
+                decoration: const InputDecoration(labelText: 'Password', border: OutlineInputBorder()),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context, null), // Batal
+              child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (emailController.text.isNotEmpty && passwordController.text.isNotEmpty) {
+                  Navigator.pop(context, {
+                    'email': emailController.text.trim(),
+                    'password': passwordController.text.trim(),
+                  });
+                }
+              },
+              style: ElevatedButton.styleFrom(backgroundColor: AppColors.primaryBlue),
+              child: const Text('Lanjut', style: TextStyle(color: Colors.white)),
+            ),
+          ],
         );
-        return;
-      }
+      },
+    );
+  }
 
+  // --- LOGIC DAFTAR & SIMPEN KE BRANKAS ---
+  Future<void> _registerRealBiometric() async {
+    // 1. Cek HP support biometrik apa ngga
+    final bool canAuthenticateWithBiometrics = await auth.canCheckBiometrics;
+    final bool canAuthenticate = canAuthenticateWithBiometrics || await auth.isDeviceSupported();
+
+    if (!canAuthenticate) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Maaf, HP ini ngga support fitur biometrik.'), backgroundColor: Colors.redAccent),
+      );
+      return;
+    }
+
+    // 2. Minta user masukin email & password buat disimpen
+    final credentials = await _showCredentialDialog();
+    if (credentials == null) return; // Kalo user mencet cancel, batalin aja
+
+    bool authenticated = false;
+    try {
+      // 3. Scan Jari
       authenticated = await auth.authenticate(
-        localizedReason: 'Tempelin jari lu buat daftarin ke GoReady',
+        localizedReason: 'Tempelin jari lu buat daftarin ke akun ini',
       );
     } on PlatformException catch (e) {
       if (!mounted) return;
@@ -63,7 +122,11 @@ class _BiometricSetupPageState extends State<BiometricSetupPage> {
     if (!mounted) return;
 
     if (authenticated) {
-      // SIMPEN STATUS KE MEMORI HP
+      // 🔥 4. KALO JARINYA BENER, TIMPA ISI BRANKAS PAKE DATA AKUN INI!
+      await secureStorage.write(key: 'saved_email', value: credentials['email']);
+      await secureStorage.write(key: 'saved_password', value: credentials['password']);
+
+      // Simpen status on/off di laci biasa
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('biometric_enabled', true);
 
@@ -71,21 +134,27 @@ class _BiometricSetupPageState extends State<BiometricSetupPage> {
         _isRegistered = true;
         _isBiometricEnabled = true;
       });
+      
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Success! Sidik jari lu udah kesimpen.'), backgroundColor: AppColors.successGreen),
+        const SnackBar(content: Text('Success! Akun ini berhasil diikat ke sidik jari. 🚀'), backgroundColor: AppColors.successGreen),
       );
     }
   }
 
-  // --- LOGIC HAPUS MEMORI ---
+  // --- LOGIC HAPUS MEMORI (KOSONGIN BRANKAS) ---
   Future<void> _resetBiometrics() async {
+    // 🔥 HAPUS DATA DARI BRANKAS BIAR NGGA BISA AUTO LOGIN
+    await secureStorage.delete(key: 'saved_email');
+    await secureStorage.delete(key: 'saved_password');
+
     final prefs = await SharedPreferences.getInstance();
-    await prefs.setBool('biometric_enabled', false); // Ubah jadi false
+    await prefs.setBool('biometric_enabled', false); 
 
     setState(() {
       _isRegistered = false;
       _isBiometricEnabled = false;
     });
+    
     if (!mounted) return;
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text('Data biometrik di-reset dari aplikasi.'), backgroundColor: Colors.redAccent),

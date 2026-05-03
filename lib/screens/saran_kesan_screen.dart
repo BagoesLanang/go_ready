@@ -96,7 +96,7 @@ class SaranKesanScreen extends StatelessWidget {
       backgroundColor: Colors.transparent,
       elevation: 0,
       leading: IconButton(icon: const Icon(Icons.arrow_back, color: AppColors.primaryBlue), onPressed: () => Navigator.pop(context)),
-      title: const Text('GoReady', style: TextStyle(color: AppColors.primaryBlue, fontWeight: FontWeight.bold, fontSize: 20)),
+      title: const Text('Feedback', style: TextStyle(color: AppColors.primaryBlue, fontWeight: FontWeight.bold, fontSize: 20)),
       centerTitle: true,
       actions: [IconButton(icon: const Icon(Icons.notifications_none_outlined, color: AppColors.primaryBlue), onPressed: () {})],
     );

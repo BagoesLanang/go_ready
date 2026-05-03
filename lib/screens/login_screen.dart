@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
+import 'package:flutter_secure_storage/flutter_secure_storage.dart'; // 🔥 IMPORT BRANKAS
 import 'package:http/http.dart' as http;
 import 'dart:convert';
 
@@ -23,8 +24,9 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isBiometricEnabled = false;
 
   final LocalAuthentication auth = LocalAuthentication();
+  final FlutterSecureStorage secureStorage =
+      const FlutterSecureStorage(); // 🔥 INIT BRANKAS
 
-  // 🔥 TAMBAHAN (TANPA NGUBAH UI)
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
@@ -35,7 +37,7 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   // =========================
-  // BIOMETRIC (TETAP)
+  // CEK STATUS BIOMETRIK DI HP
   // =========================
   Future<void> _checkIfBiometricSetupDone() async {
     final prefs = await SharedPreferences.getInstance();
@@ -44,14 +46,25 @@ class _LoginScreenState extends State<LoginScreen> {
     });
   }
 
+  // =========================
+  // 🔥 LOGIN PAKE BIOMETRIK (LOGIC BARU)
+  // =========================
   Future<void> _loginWithBiometrics() async {
-    if (!_isBiometricEnabled) return;
+    if (!_isBiometricEnabled) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text("Biometrik belum diaktifkan di akun manapun."),
+        ),
+      );
+      return;
+    }
 
     final canCheck = await auth.canCheckBiometrics;
     final supported = canCheck || await auth.isDeviceSupported();
 
     if (!supported) return;
 
+    // 1. Munculin Pop-Up Sidik Jari
     final authenticated = await auth.authenticate(
       localizedReason: 'Scan sidik jari / Face ID buat masuk',
     );
@@ -59,15 +72,35 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
 
     if (authenticated) {
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(builder: (context) => const MainLayout()),
-      );
+      // 2. Kalo sidik jari bener, buka brankas ambil kredensial yang kesimpen
+      String? savedEmail = await secureStorage.read(key: 'saved_email');
+      String? savedPassword = await secureStorage.read(key: 'saved_password');
+
+      if (savedEmail != null && savedPassword != null) {
+        // 3. Masukin data dari brankas ke controller seakan-akan user yang ngetik
+        emailController.text = savedEmail;
+        passwordController.text = savedPassword;
+
+        // 4. Tembak API Login (Auto-login)
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Mencoba login..."),
+            duration: Duration(seconds: 1),
+          ),
+        );
+        await loginUser();
+      } else {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text("Data biometrik tidak valid. Silakan login manual."),
+          ),
+        );
+      }
     }
   }
 
   // =========================
-  // 🔥 LOGIN BACKEND
+  // LOGIN BACKEND (MANUAL & AUTO)
   // =========================
   Future<void> loginUser() async {
     final url = Uri.parse("${ApiConfig.baseUrl}/login");
@@ -87,18 +120,16 @@ class _LoginScreenState extends State<LoginScreen> {
       if (data["success"] == true && data["user"] != null) {
         final user = data['user'];
 
-        // 🔥 CLEAR SESSION LAMA
         UserSession.clear();
-
-        // 🔥 SET USER BARU
         UserSession.userId = user['id'];
 
-        // 🔥 SIMPAN KE LOCAL
-        // 🔥 SIMPAN KE LOCAL
         final prefs = await SharedPreferences.getInstance();
-        await prefs.setString('user_id', user['id'].toString()); // ID-nya kita jadiin String biar aman nyambungnya
-        await prefs.setString('user_name', user['name'] ?? 'Guest User'); // Disimpen di laci umum (buat fallback)
-        await prefs.setString('user_name_${user['id']}', user['name'] ?? 'Guest User'); // DISIMPEN DI LACI SPESIFIK (Ini yang paling penting!)
+        await prefs.setString('user_id', user['id'].toString());
+        await prefs.setString('user_name', user['name'] ?? 'Guest User');
+        await prefs.setString(
+          'user_name_${user['id']}',
+          user['name'] ?? 'Guest User',
+        );
 
         Navigator.pushReplacement(
           context,
@@ -128,23 +159,18 @@ class _LoginScreenState extends State<LoginScreen> {
             crossAxisAlignment: CrossAxisAlignment.stretch,
             children: [
               const SizedBox(height: 40),
-
               Center(
                 child: Image.asset(
                   'assets/images/logofix.png',
                   height: 100,
-                  errorBuilder: (context, error, stackTrace) {
-                    return const Icon(
-                      Icons.broken_image,
-                      size: 80,
-                      color: Colors.grey,
-                    );
-                  },
+                  errorBuilder: (context, error, stackTrace) => const Icon(
+                    Icons.broken_image,
+                    size: 80,
+                    color: Colors.grey,
+                  ),
                 ),
               ),
-
               const SizedBox(height: 16),
-
               const Center(
                 child: Text(
                   'GoReady',
@@ -155,16 +181,13 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
-
               const SizedBox(height: 8),
-
               const Center(
                 child: Text(
                   "Don't forget your essentials",
                   style: TextStyle(fontSize: 14, color: Colors.grey),
                 ),
               ),
-
               const SizedBox(height: 48),
 
               const Text(
@@ -172,9 +195,8 @@ class _LoginScreenState extends State<LoginScreen> {
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-
               TextField(
-                controller: emailController, // 🔥 CONNECT
+                controller: emailController,
                 decoration: InputDecoration(
                   hintText: 'you@example.com',
                   prefixIcon: const Icon(Icons.email_outlined),
@@ -188,15 +210,13 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
 
               const SizedBox(height: 24),
-
               const Text(
                 'Password',
                 style: TextStyle(fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 8),
-
               TextField(
-                controller: passwordController, // 🔥 CONNECT
+                controller: passwordController,
                 obscureText: _obscurePassword,
                 decoration: InputDecoration(
                   hintText: '........',
@@ -207,11 +227,8 @@ class _LoginScreenState extends State<LoginScreen> {
                           ? Icons.visibility_off_outlined
                           : Icons.visibility_outlined,
                     ),
-                    onPressed: () {
-                      setState(() {
-                        _obscurePassword = !_obscurePassword;
-                      });
-                    },
+                    onPressed: () =>
+                        setState(() => _obscurePassword = !_obscurePassword),
                   ),
                   filled: true,
                   fillColor: Colors.grey.shade200,
@@ -223,15 +240,11 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
 
               const SizedBox(height: 32),
-
-              // 🔥 BUTTON (UI SAMA, LOGIC GANTI)
               Row(
                 children: [
                   Expanded(
                     child: ElevatedButton(
-                      onPressed: () async {
-                        await loginUser(); // 🔥 API
-                      },
+                      onPressed: () async => await loginUser(),
                       style: ElevatedButton.styleFrom(
                         backgroundColor: const Color(0xFF0056D2),
                         padding: const EdgeInsets.symmetric(vertical: 16),
@@ -245,10 +258,7 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ),
-
                   const SizedBox(width: 12),
-
-                  // 🔥 BIOMETRIC (TETAP) 
                   Container(
                     decoration: BoxDecoration(
                       color: const Color(0xFF0056D2),
@@ -268,7 +278,6 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
 
               const SizedBox(height: 32),
-
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
