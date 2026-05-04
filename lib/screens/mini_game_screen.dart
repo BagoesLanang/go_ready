@@ -13,8 +13,7 @@ class MiniGameScreen extends StatefulWidget {
 
 class _MiniGameScreenState extends State<MiniGameScreen> {
   int _score = 0;
-  
-  // Data Item Game
+
   final List<Map<String, dynamic>> _allItems = [
     {'name': 'Dompet', 'icon': Icons.account_balance_wallet_rounded},
     {'name': 'Kunci', 'icon': Icons.key_rounded},
@@ -28,14 +27,12 @@ class _MiniGameScreenState extends State<MiniGameScreen> {
   late Map<String, dynamic> _leftBox;
   late Map<String, dynamic> _rightBox;
 
-  // Sensor & Cursor State
-  StreamSubscription<AccelerometerEvent>? _accelSubscription;
-  double _cursorX = 0.0; // Range: -1.0 (Kiri) sampe 1.0 (Kanan)
-  
-  // Selection State
-  String _hoveredSide = 'none'; // 'left', 'right', 'none'
+  StreamSubscription<GyroscopeEvent>? _gyroSubscription;
+  double _cursorX = 0.0;
+
+  String _hoveredSide = 'none';
   Timer? _holdTimer;
-  bool _isProcessingFeedback = false; // Biar ga dobel klik pas lagi animasi
+  bool _isProcessingFeedback = false;
 
   @override
   void initState() {
@@ -45,14 +42,12 @@ class _MiniGameScreenState extends State<MiniGameScreen> {
   }
 
   void _initSensor() {
-    // Dengerin pergerakan Accelerometer HP
-    _accelSubscription = accelerometerEventStream().listen((AccelerometerEvent event) {
+    _gyroSubscription = gyroscopeEventStream().listen((GyroscopeEvent event) {
       if (_isProcessingFeedback) return;
 
       setState(() {
-        // Mapping X axis. Dibagi 3.0 biar sensitivitasnya pas.
-        // Dikasih minus (-) biar pas HP miring kanan, cursor ke kanan.
-        _cursorX = -(event.x / 3.0).clamp(-1.0, 1.0);
+        _cursorX += (event.y * 0.08);
+        _cursorX = _cursorX.clamp(-1.0, 1.0);
       });
 
       _checkHoverState();
@@ -61,22 +56,19 @@ class _MiniGameScreenState extends State<MiniGameScreen> {
 
   void _checkHoverState() {
     String currentSide = 'none';
-    
-    // Tentukan zona kiri atau kanan berdasarkan posisi cursor
+
     if (_cursorX < -0.4) {
       currentSide = 'left';
     } else if (_cursorX > 0.4) {
       currentSide = 'right';
     }
 
-    // Kalo cursor pindah zona, reset timer
     if (currentSide != _hoveredSide) {
       _holdTimer?.cancel();
       setState(() {
         _hoveredSide = currentSide;
       });
 
-      // Kalo lagi di dalem kotak, mulai hitung 1 detik
       if (currentSide != 'none') {
         _holdTimer = Timer(const Duration(milliseconds: 1000), () {
           _verifySelection(currentSide);
@@ -90,37 +82,52 @@ class _MiniGameScreenState extends State<MiniGameScreen> {
       _isProcessingFeedback = true;
     });
 
-    Map<String, dynamic> selectedItem = selectedSide == 'left' ? _leftBox : _rightBox;
+    Map<String, dynamic> selectedItem = selectedSide == 'left'
+        ? _leftBox
+        : _rightBox;
     bool isCorrect = selectedItem['name'] == _targetItem['name'];
 
     if (isCorrect) {
-      // BENAR
       setState(() {
         _score++;
       });
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Correct! 🎯', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold)),
+          content: const Text(
+            'Correct! 🎯',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
           backgroundColor: AppColors.successGreen,
           duration: const Duration(milliseconds: 500),
           behavior: SnackBarBehavior.floating,
-          margin: EdgeInsets.only(bottom: MediaQuery.of(context).size.height - 150, left: 50, right: 50),
+          margin: EdgeInsets.only(
+            bottom: MediaQuery.of(context).size.height - 150,
+            left: 50,
+            right: 50,
+          ),
         ),
       );
     } else {
-      // SALAH (Feedback Merah)
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: const Text('Wrong Item! ❌', textAlign: TextAlign.center, style: TextStyle(fontWeight: FontWeight.bold)),
+          content: const Text(
+            'Wrong Item! ❌',
+            textAlign: TextAlign.center,
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
           backgroundColor: AppColors.dangerRed,
           duration: const Duration(milliseconds: 500),
           behavior: SnackBarBehavior.floating,
-          margin: EdgeInsets.only(bottom: MediaQuery.of(context).size.height - 150, left: 50, right: 50),
+          margin: EdgeInsets.only(
+            bottom: MediaQuery.of(context).size.height - 150,
+            left: 50,
+            right: 50,
+          ),
         ),
       );
     }
 
-    // Kasih jeda dikit buat ngeliat feedback, trus lanjut round
     Future.delayed(const Duration(milliseconds: 800), () {
       if (mounted) {
         _setupNewRound();
@@ -133,16 +140,13 @@ class _MiniGameScreenState extends State<MiniGameScreen> {
 
   void _setupNewRound() {
     final random = Random();
-    
-    // Pilih 2 item unik
+
     var shuffledItems = List<Map<String, dynamic>>.from(_allItems)..shuffle();
     var option1 = shuffledItems[0];
     var option2 = shuffledItems[1];
 
-    // Tentukan mana yang jadi target
     _targetItem = random.nextBool() ? option1 : option2;
 
-    // Randomize posisi kiri-kanan
     if (random.nextBool()) {
       _leftBox = option1;
       _rightBox = option2;
@@ -154,7 +158,7 @@ class _MiniGameScreenState extends State<MiniGameScreen> {
 
   @override
   void dispose() {
-    _accelSubscription?.cancel();
+    _gyroSubscription?.cancel();
     _holdTimer?.cancel();
     super.dispose();
   }
@@ -167,10 +171,20 @@ class _MiniGameScreenState extends State<MiniGameScreen> {
         backgroundColor: Colors.transparent,
         elevation: 0,
         leading: IconButton(
-          icon: const Icon(Icons.arrow_back_ios_new, color: AppColors.primaryBlue),
+          icon: const Icon(
+            Icons.arrow_back_ios_new,
+            color: AppColors.primaryBlue,
+          ),
           onPressed: () => Navigator.pop(context),
         ),
-        title: Text('Score: $_score', style: const TextStyle(color: AppColors.primaryBlue, fontWeight: FontWeight.bold, fontSize: 24)),
+        title: Text(
+          'Score: $_score',
+          style: const TextStyle(
+            color: AppColors.primaryBlue,
+            fontWeight: FontWeight.bold,
+            fontSize: 24,
+          ),
+        ),
         centerTitle: true,
       ),
       body: SafeArea(
@@ -178,21 +192,30 @@ class _MiniGameScreenState extends State<MiniGameScreen> {
           padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
           child: Column(
             children: [
-              // --- Pertanyaan ---
-              const Text('TILT & HOLD TO SELECT:', style: TextStyle(fontSize: 14, color: AppColors.textSecondary, fontWeight: FontWeight.bold, letterSpacing: 1.2)),
+              const Text(
+                'TILT & HOLD TO SELECT:',
+                style: TextStyle(
+                  fontSize: 14,
+                  color: AppColors.textSecondary,
+                  fontWeight: FontWeight.bold,
+                  letterSpacing: 1.2,
+                ),
+              ),
               const SizedBox(height: 8),
               Text(
                 'Pilih: ${_targetItem['name']}',
-                style: const TextStyle(fontSize: 32, fontWeight: FontWeight.bold, color: AppColors.textPrimary),
+                style: const TextStyle(
+                  fontSize: 32,
+                  fontWeight: FontWeight.bold,
+                  color: AppColors.textPrimary,
+                ),
               ),
               const SizedBox(height: 40),
 
-              // --- Area Permainan (Boxes + Cursor) ---
               Expanded(
                 child: Stack(
                   alignment: Alignment.center,
                   children: [
-                    // Kotak Kiri dan Kanan
                     Row(
                       children: [
                         Expanded(child: _buildItemBox(_leftBox, 'left')),
@@ -201,9 +224,8 @@ class _MiniGameScreenState extends State<MiniGameScreen> {
                       ],
                     ),
 
-                    // Cursor Penunjuk (Gerak pake Alignment)
                     Align(
-                      alignment: Alignment(_cursorX, 0.2), // Y nya disetting agak ke bawah dikit
+                      alignment: Alignment(_cursorX, 0.2),
                       child: Container(
                         width: 40,
                         height: 40,
@@ -216,23 +238,26 @@ class _MiniGameScreenState extends State<MiniGameScreen> {
                               color: AppColors.dangerRed.withOpacity(0.4),
                               blurRadius: 10,
                               spreadRadius: 2,
-                            )
+                            ),
                           ],
                         ),
-                        child: const Icon(Icons.gps_fixed, color: Colors.white, size: 20),
+                        child: const Icon(
+                          Icons.gps_fixed,
+                          color: Colors.white,
+                          size: 20,
+                        ),
                       ),
                     ),
                   ],
                 ),
               ),
               const SizedBox(height: 40),
-              
-              // Instruksi Bawah
+
               const Text(
                 'Tilt your phone left or right.\nHold the cursor over an item for 1 second.',
                 textAlign: TextAlign.center,
                 style: TextStyle(color: Colors.grey, fontSize: 14),
-              )
+              ),
             ],
           ),
         ),
@@ -240,7 +265,6 @@ class _MiniGameScreenState extends State<MiniGameScreen> {
     );
   }
 
-  // Helper widget buat bikin kotaknya
   Widget _buildItemBox(Map<String, dynamic> item, String side) {
     bool isHovered = _hoveredSide == side;
 
@@ -248,20 +272,32 @@ class _MiniGameScreenState extends State<MiniGameScreen> {
       duration: const Duration(milliseconds: 200),
       height: 200,
       decoration: BoxDecoration(
-        color: isHovered ? AppColors.primaryBlue.withOpacity(0.1) : AppColors.whiteCard,
+        color: isHovered
+            ? AppColors.primaryBlue.withOpacity(0.1)
+            : AppColors.whiteCard,
         borderRadius: BorderRadius.circular(24),
         border: Border.all(
           color: isHovered ? AppColors.primaryBlue : Colors.grey.shade200,
           width: isHovered ? 4 : 2,
         ),
         boxShadow: isHovered
-            ? [BoxShadow(color: AppColors.primaryBlue.withOpacity(0.2), blurRadius: 20, spreadRadius: 2)]
+            ? [
+                BoxShadow(
+                  color: AppColors.primaryBlue.withOpacity(0.2),
+                  blurRadius: 20,
+                  spreadRadius: 2,
+                ),
+              ]
             : [],
       ),
       child: Column(
         mainAxisAlignment: MainAxisAlignment.center,
         children: [
-          Icon(item['icon'], size: 80, color: isHovered ? AppColors.primaryBlue : AppColors.textSecondary),
+          Icon(
+            item['icon'],
+            size: 80,
+            color: isHovered ? AppColors.primaryBlue : AppColors.textSecondary,
+          ),
           const SizedBox(height: 16),
           Text(
             item['name'],
@@ -271,8 +307,7 @@ class _MiniGameScreenState extends State<MiniGameScreen> {
               color: isHovered ? AppColors.primaryBlue : AppColors.textPrimary,
             ),
           ),
-          
-          // Indikator loading (pura-puranya) pas lagi di-hover
+
           const SizedBox(height: 12),
           Opacity(
             opacity: isHovered ? 1.0 : 0.0,
@@ -281,10 +316,12 @@ class _MiniGameScreenState extends State<MiniGameScreen> {
               height: 4,
               child: LinearProgressIndicator(
                 backgroundColor: Colors.transparent,
-                valueColor: AlwaysStoppedAnimation<Color>(AppColors.primaryBlue),
+                valueColor: AlwaysStoppedAnimation<Color>(
+                  AppColors.primaryBlue,
+                ),
               ),
             ),
-          )
+          ),
         ],
       ),
     );

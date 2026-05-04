@@ -4,8 +4,8 @@ import 'package:latlong2/latlong.dart';
 import 'package:geolocator/geolocator.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-import 'package:url_launcher/url_launcher.dart'; // Buat nembak rute ke Google Maps
-import '../theme/colors.dart'; // Sesuaikan path ini
+import 'package:url_launcher/url_launcher.dart'; 
+import '../theme/colors.dart'; 
 
 class NearbyPage extends StatefulWidget {
   const NearbyPage({super.key});
@@ -19,7 +19,7 @@ class _NearbyPageState extends State<NearbyPage> {
 
   LatLng? _userLocation;
   bool _isLoading = true;
-  List<Map<String, dynamic>> _placesData = []; // Data lengkap tempat
+  List<Map<String, dynamic>> _placesData = []; 
   final MapController _mapController = MapController();
 
   @override
@@ -28,7 +28,6 @@ class _NearbyPageState extends State<NearbyPage> {
     _getUserRealLocation();
   }
 
-  // --- LOGIC 1: DAPETIN LOKASI ASLI ---
   Future<void> _getUserRealLocation() async {
     bool serviceEnabled = await Geolocator.isLocationServiceEnabled();
     if (!serviceEnabled) {
@@ -62,7 +61,6 @@ class _NearbyPageState extends State<NearbyPage> {
     }
   }
 
-  // --- LOGIC 2: NEMBAK API OVERPASS (VERSI REVISI) ---
   Future<void> _fetchRealNearbyPlaces(String category) async {
     if (_userLocation == null) return;
 
@@ -71,8 +69,6 @@ class _NearbyPageState extends State<NearbyPage> {
       _placesData.clear();
     });
 
-    // Pake "nwr" (Node, Way, Relation) biar gedung gede kayak kampus tetep kebaca
-    // Pake "out center" biar dapet titik tengah gedungnya
     String query = '[out:json][timeout:25];';
     if (category == 'ATM') {
       query +=
@@ -103,12 +99,10 @@ class _NearbyPageState extends State<NearbyPage> {
         List<Map<String, dynamic>> newPlaces = [];
 
         for (var el in elements) {
-          // Ambil titik koordinat (Bisa dari lat/lon langsung atau dari center)
           final lat = el['lat'] ?? el['center']['lat'];
           final lon = el['lon'] ?? el['center']['lon'];
           final name = el['tags']?['name'] ?? 'Unknown $category';
 
-          // Ngitung jarak lokasi kita ke tempat ini (dalam meter)
           final distance = Geolocator.distanceBetween(
             _userLocation!.latitude,
             _userLocation!.longitude,
@@ -124,7 +118,6 @@ class _NearbyPageState extends State<NearbyPage> {
           });
         }
 
-        // Urutin dari yang paling deket ke paling jauh
         newPlaces.sort((a, b) => a['distance'].compareTo(b['distance']));
 
         if (mounted) {
@@ -133,7 +126,6 @@ class _NearbyPageState extends State<NearbyPage> {
             _isLoading = false;
           });
 
-          // Kalo dapet data, geser kamera map ke area tersebut
           if (_placesData.isNotEmpty) {
             _mapController.move(_userLocation!, 13.5);
           }
@@ -146,11 +138,9 @@ class _NearbyPageState extends State<NearbyPage> {
     }
   }
 
-  // --- LOGIC 3: ARAHIN RUTE KE GOOGLE MAPS ASLI ---
   Future<void> _openGoogleMapsRoute(double destLat, double destLon) async {
     final originLat = _userLocation!.latitude;
     final originLon = _userLocation!.longitude;
-    // URL ini bakal otomatis buka app Google Maps di HP lu
     final url = Uri.parse(
       'https://www.google.com/maps/dir/?api=1&origin=$originLat,$originLon&destination=$destLat,$destLon&travelmode=driving',
     );
@@ -200,7 +190,6 @@ class _NearbyPageState extends State<NearbyPage> {
             )
           : Stack(
               children: [
-                // 1. BACKGROUND MAPS
                 FlutterMap(
                   mapController: _mapController,
                   options: MapOptions(
@@ -215,7 +204,6 @@ class _NearbyPageState extends State<NearbyPage> {
                     ),
                     MarkerLayer(
                       markers: [
-                        // MARKER USER (KITA)
                         Marker(
                           point: _userLocation!,
                           width: 50,
@@ -226,7 +214,6 @@ class _NearbyPageState extends State<NearbyPage> {
                             size: 36,
                           ),
                         ),
-                        // MARKER TEMPAT DARI API
                         ..._placesData
                             .map(
                               (place) => Marker(
@@ -246,7 +233,6 @@ class _NearbyPageState extends State<NearbyPage> {
                   ],
                 ),
 
-                // 2. KATEGORI FILTER DI ATAS MAP
                 Positioned(
                   top: 16,
                   left: 0,
@@ -265,7 +251,6 @@ class _NearbyPageState extends State<NearbyPage> {
                   ),
                 ),
 
-                // 3. LOADING INDIKATOR DI TENGAH
                 if (_isLoading)
                   const Center(
                     child: Card(
@@ -278,21 +263,19 @@ class _NearbyPageState extends State<NearbyPage> {
                     ),
                   ),
 
-                // 4. CARDS LIST DI BAWAH (UI BARU)
                 if (!_isLoading && _placesData.isNotEmpty)
                   Positioned(
                     bottom: 24,
                     left: 0,
                     right: 0,
                     child: SizedBox(
-                      height: 140, // Tinggi Card
+                      height: 140, 
                       child: PageView.builder(
                         controller: PageController(
                           viewportFraction: 0.85,
-                        ), // Biar card sebelah keliatan ngintip
+                        ), 
                         itemCount: _placesData.length,
                         onPageChanged: (index) {
-                          // Kalo card di-swipe, kamera map gerak ngikutin tempatnya
                           final place = _placesData[index];
                           _mapController.move(
                             LatLng(place['lat'], place['lon']),
@@ -301,7 +284,6 @@ class _NearbyPageState extends State<NearbyPage> {
                         },
                         itemBuilder: (context, index) {
                           final place = _placesData[index];
-                          // Convert jarak meter jadi KM
                           final distanceText = place['distance'] > 1000
                               ? '${(place['distance'] / 1000).toStringAsFixed(1)} KM'
                               : '${place['distance'].toStringAsFixed(0)} Meter';
@@ -385,7 +367,6 @@ class _NearbyPageState extends State<NearbyPage> {
                     ),
                   ),
 
-                // Kalo API narik tapi kosong
                 if (!_isLoading && _placesData.isEmpty)
                   Positioned(
                     bottom: 40,

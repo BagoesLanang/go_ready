@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import '../theme/colors.dart';
 import 'home_screen.dart';
-import 'find_item_screen.dart'; // <-- Import Find Item gantiin History
+import 'find_item_screen.dart'; 
 import 'nearby_page.dart';
 import 'profile_page.dart';
 import 'more_page.dart';
@@ -18,17 +18,15 @@ class _MainLayoutState extends State<MainLayout> {
 
   @override
   Widget build(BuildContext context) {
-    // List halaman dipindah ke dalem build biar gampang nge-passing fungsi ganti tab
     final List<Widget> pages = [
       HomeScreen(
-        // Ini fungsi sakti yang bikin tombol di Home bisa mindahin tab
         onNavigate: (index) {
           setState(() {
             _currentIndex = index;
           });
         },
       ),
-      const FindItemScreen(), // <-- Index 1 sekarang isinya fitur nyari barang
+      const FindItemScreen(), 
       const NearbyPage(),
       const ProfilePage(),
       const MorePage(),
@@ -36,7 +34,7 @@ class _MainLayoutState extends State<MainLayout> {
 
     return Scaffold(
       backgroundColor: AppColors.background,
-      body: pages[_currentIndex], // Nampilin halaman sesuai index
+      body: pages[_currentIndex], 
       bottomNavigationBar: BottomNavigationBar(
         currentIndex: _currentIndex,
         onTap: (index) {
@@ -45,7 +43,7 @@ class _MainLayoutState extends State<MainLayout> {
           });
         },
         type:
-            BottomNavigationBarType.fixed, // Biar labelnya tetep keliatan semua
+            BottomNavigationBarType.fixed, 
         backgroundColor: Colors.white,
         selectedItemColor: AppColors.primaryBlue,
         unselectedItemColor: Colors.grey.shade400,
@@ -58,7 +56,6 @@ class _MainLayoutState extends State<MainLayout> {
             label: 'Home',
           ),
           BottomNavigationBarItem(
-            // <-- Icon dan Label Navbar udah di-update
             icon: Icon(Icons.history),
             activeIcon: Icon(Icons.history),
             label: 'Find',

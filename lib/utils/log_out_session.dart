@@ -6,13 +6,10 @@ import '../screens/login_screen.dart';
 Future<void> logout(BuildContext context) async {
   final prefs = await SharedPreferences.getInstance();
 
-  // 🔥 HAPUS SESSION
   await prefs.remove('user_id');
 
-  // 🔥 RESET USER
   UserSession.userId = null;
 
-  // 🔥 BALIK KE LOGIN
   Navigator.pushAndRemoveUntil(
     context,
     MaterialPageRoute(builder: (_) => const LoginScreen()),

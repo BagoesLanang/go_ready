@@ -13,7 +13,6 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   final TextEditingController _chatController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
 
-  // List buat nyimpen history chat: map isinya 'role' (user/ai) dan 'text'
   final List<Map<String, String>> _messages = [];
   bool _isLoading = false;
 
@@ -26,9 +25,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     _initChatbot();
   }
 
-  // --- LOGIC SETUP GEMINI AI ---
   void _initChatbot() {
-    // Inject persona asisten ke Gemini pake systemInstruction
     _model = GenerativeModel(
       model: 'gemini-2.5-flash',
       apiKey: 'AIzaSyAWfeALDIleYqp8R9twkKmV_77uFaQOcmo',
@@ -37,15 +34,13 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
         'Kamu hanya boleh menjawab hal yang berkaitan dengan packing, barang bawaan, outfit traveling, persiapan pergi, saran barang. '
         'Jika user bertanya di luar topik tersebut (misal: sejarah, matematika, politik, coding, dll), KAMU HARUS MENOLAK UNTUK MENJAWAB.'
         'DILARANG KERAS menggunakan format markdown. '
-        'JANGAN PERNAH memunculkan simbol bintang (*) di jawabanmu. ' // 🔥 Kasih instruksi galak
+        'JANGAN PERNAH memunculkan simbol bintang (*) di jawabanmu. ' 
         'Gunakan angka (1, 2, 3) atau strip (-) saja untuk membuat list barang.',
       ),
     );
 
-    // Pake fitur chat session biar dia inget konteks obrolan
     _chatSession = _model.startChat();
 
-    // Greeting awal dari AI
     setState(() {
       _messages.add({
         'role': 'ai',
@@ -55,7 +50,6 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
     });
   }
 
-  // --- LOGIC KIRIM PESAN ---
   Future<void> _sendMessage(String text) async {
     if (text.trim().isEmpty) return;
 
@@ -74,7 +68,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       String cleanReply = rawReply.replaceAll(
         '*',
         '',
-      ); // Ngubah bintang satu jadi bullet point bulet
+      ); 
 
       setState(() {
         _messages.add({'role': 'ai', 'text': cleanReply.trim()});
@@ -126,7 +120,6 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
       ),
       body: Column(
         children: [
-          // Area Chat
           Expanded(
             child: ListView.builder(
               controller: _scrollController,
@@ -176,14 +169,12 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
             ),
           ),
 
-          // Loading Indicator
           if (_isLoading)
             const Padding(
               padding: EdgeInsets.symmetric(vertical: 8.0),
               child: CircularProgressIndicator(),
             ),
 
-          // Area Input Text
           Container(
             padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
             decoration: BoxDecoration(

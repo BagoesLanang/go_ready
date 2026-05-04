@@ -24,18 +24,14 @@ class _ProfilePageState extends State<ProfilePage> {
     _loadProfileData(); 
   }
 
-  // --- FUNGSI TARIK DATA (CARI LACI SESUAI USER ID) ---
   Future<void> _loadProfileData() async {
     final prefs = await SharedPreferences.getInstance();
     
-    // 1. Bikin uniqueId-nya dulu di sini ngambil dari memori HP
     final String uniqueId = prefs.getString('user_id') ?? prefs.getString('user_name') ?? 'unknown_user';
     
-    // 2. Siapin default name-nya
     final String defaultName = prefs.getString('user_name') ?? 'Guest User';
 
     setState(() {
-      // 3. Update semua UI pake laci yang udah spesifik per user
       _userName = prefs.getString('user_name_$uniqueId') ?? defaultName;
       _userUniv = prefs.getString('user_univ_$uniqueId') ?? '';
       _userBio = prefs.getString('user_bio_$uniqueId') ?? '';
@@ -126,10 +122,8 @@ class _ProfilePageState extends State<ProfilePage> {
               onPressed: () async {
                 final prefs = await SharedPreferences.getInstance();
                 
-                // LOGIC LOGOUT HARUS AMAN DARI NGEHAPUS DATA LOKAL (Biar ngga reset)
                 await prefs.remove('user_id'); 
                 await prefs.remove('user_name'); 
-                // Catatan: KITA NGGA NGEHAPUS 'user_name_123', 'user_bio_123' biar pas Dira balik login, bio-nya tetep ada.
                 
                 UserSession.clear();
 

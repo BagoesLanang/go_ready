@@ -6,7 +6,7 @@ import 'package:sensors_plus/sensors_plus.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../theme/colors.dart';
-import '../services/api_service.dart'; // 🔥 IMPORT API BACKEND LU DI SINI
+import '../services/api_service.dart'; 
 import 'ready_to_go_screen.dart';
 
 class ChecklistScreen extends StatefulWidget {
@@ -25,7 +25,7 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
 
   bool _isCooldown = false;
   int _stepCounter = 0;
-  DateTime _lastStepTime = DateTime.now(); // Pencatat waktu langkah
+  DateTime _lastStepTime = DateTime.now(); 
 
   @override
   void initState() {
@@ -35,11 +35,9 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
     _startListeningToSensor();
   }
 
-  // --- LOGIC CRUD 1: LOAD & SAVE DARI MEMORI HP ---
   Future<void> _loadChecklistData() async {
     final prefs = await SharedPreferences.getInstance();
 
-    // 🔥 FIX: Selalu reset ke default tiap kali screen dibuka atau ganti akun
     setState(() {
       _checklistItems = [
         {'id': '1', 'name': 'Wallet', 'isChecked': false},
@@ -49,7 +47,6 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
       ];
     });
 
-    // Timpa data lama di SharedPreferences biar bener-bener clean
     await prefs.setString('my_checklist', json.encode(_checklistItems));
   }
 
@@ -58,19 +55,17 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
     await prefs.setString('my_checklist', json.encode(_checklistItems));
   }
 
-  // --- LOGIC HELPER BUAT SNACKBAR ERROR ---
   void _showDuplicateError(String itemName) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('Eits, barang "$itemName" udah ada di list lu brok!'),
-        backgroundColor: Colors.redAccent, // Pake merah biar keliatan error
+        backgroundColor: Colors.redAccent, 
         behavior: SnackBarBehavior.floating,
         duration: const Duration(seconds: 2),
       ),
     );
   }
 
-  // --- LOGIC CRUD 2: POP-UP BUAT CREATE & UPDATE + VALIDASI DUPLIKAT ---
   void _showItemDialog({int? index}) {
     TextEditingController controller = TextEditingController(
       text: index != null ? _checklistItems[index]['name'] : '',
@@ -112,7 +107,6 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
               String newItemName = controller.text.trim();
 
               if (newItemName.isNotEmpty) {
-                // --- CEK DUPLIKAT DI SINI (Case Insensitive) ---
                 bool isDuplicate = _checklistItems.any(
                   (item) =>
                       item['name'].toString().toLowerCase() ==
@@ -162,7 +156,6 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
     );
   }
 
-  // --- LOGIC NOTIFIKASI & SENSOR ---
   Future<void> _setupNotifications() async {
     const AndroidInitializationSettings initSettingsAndroid =
         AndroidInitializationSettings('@mipmap/ic_launcher');
@@ -288,7 +281,6 @@ class _ChecklistScreenState extends State<ChecklistScreen> {
           child: SizedBox(
             height: 54,
             child: ElevatedButton(
-              // 🔥 LOGIC DB BACKEND LU DI SINI
               onPressed: () async {
                 List<String> selectedItems = [];
                 for (var item in _checklistItems) {

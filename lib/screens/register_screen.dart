@@ -15,12 +15,10 @@ class RegisterScreen extends StatefulWidget {
 class _RegisterScreenState extends State<RegisterScreen> {
   bool _obscurePassword = true;
 
-  // 🔥 TAMBAHAN CONTROLLER (TANPA NGUBAH UI)
   final TextEditingController nameController = TextEditingController();
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
 
-  // 🔥 FUNCTION REGISTER BACKEND
   Future<void> registerUser() async {
     final url = Uri.parse("${ApiConfig.baseUrl}/register");
 
@@ -29,7 +27,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
         url,
         headers: {"Content-Type": "application/json"},
         body: jsonEncode({
-          "name": nameController.text.trim(), // 🔥 tambahan
+          "name": nameController.text.trim(),
           "email": emailController.text.trim(),
           "password": passwordController.text.trim(),
         }),
@@ -85,11 +83,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               const SizedBox(height: 40),
 
-              // 🔹 FULL NAME
               const Text('Full Name', style: TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
               TextField(
-                controller: nameController, // 🔥 CONNECT
+                controller: nameController, 
                 decoration: InputDecoration(
                   hintText: 'John Doe',
                   prefixIcon: const Icon(Icons.person_outline, color: AppColors.textSecondary),
@@ -103,11 +100,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               const SizedBox(height: 20),
 
-              // 🔹 EMAIL
               const Text('Email Address', style: TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
               TextField(
-                controller: emailController, // 🔥 CONNECT
+                controller: emailController, 
                 decoration: InputDecoration(
                   hintText: 'you@example.com',
                   prefixIcon: const Icon(Icons.email_outlined, color: AppColors.textSecondary),
@@ -121,11 +117,10 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               const SizedBox(height: 20),
 
-              // 🔹 PASSWORD
               const Text('Password', style: TextStyle(fontWeight: FontWeight.w600)),
               const SizedBox(height: 8),
               TextField(
-                controller: passwordController, // 🔥 CONNECT
+                controller: passwordController,
                 obscureText: _obscurePassword,
                 decoration: InputDecoration(
                   hintText: '••••••••',
@@ -153,10 +148,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               const SizedBox(height: 40),
 
-              // 🔥 BUTTON (UI SAMA, LOGIC GANTI)
               ElevatedButton(
                 onPressed: () async {
-                  await registerUser(); // 🔥 API CALL
+                  await registerUser(); 
                 },
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppColors.primaryBlue,
@@ -172,7 +166,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
               ),
               const SizedBox(height: 32),
 
-              // 🔹 BACK TO LOGIN
               Row(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [

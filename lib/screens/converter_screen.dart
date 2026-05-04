@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'dart:async';
-import 'dart:convert'; // Buat parse JSON dari API
-import 'package:http/http.dart' as http; // Buat fetch API
+import 'dart:convert'; 
+import 'package:http/http.dart' as http; 
 import 'package:intl/intl.dart';
 import '../theme/colors.dart';
 
@@ -10,7 +10,6 @@ class ConverterScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // DefaultTabController bikin gampang urusan swipe tab
     return DefaultTabController(
       length: 2,
       child: Scaffold(
@@ -48,9 +47,6 @@ class ConverterScreen extends StatelessWidget {
   }
 }
 
-// ==========================================
-// TAB 1: CURRENCY CONVERTER
-// ==========================================
 class _CurrencyTab extends StatefulWidget {
   const _CurrencyTab();
 
@@ -64,26 +60,21 @@ class _CurrencyTabState extends State<_CurrencyTab> {
   String _toCurrency = 'USD';
   double _result = 0.0;
 
-  // Nilai default ini otomatis bakal ketimpa sama API.
-  // Format rasionya disesuaikan jadi "Berapa nilainya untuk 1 IDR" (karena base-nya IDR)
   Map<String, double> _rates = {
     'IDR': 1.0,
-    'USD': 0.0000625, // Fallback jika no internet: 1 / 16000
-    'JPY': 0.0095238, // Fallback jika no internet: 1 / 105
+    'USD': 0.0000625, 
+    'JPY': 0.0095238, 
   };
 
-  // --- TARUH API KEY EXCHANGE-RATE API LU DI SINI ---
   final String apiKey = 'a2ea9c585fc2d09231d5c50a';
 
   @override
   void initState() {
     super.initState();
-    _fetchRates(); // Panggil API pas halamannya pertama kali dibuka
+    _fetchRates(); 
   }
 
-  // Logic buat narik data mata uang real-time
   Future<void> _fetchRates() async {
-    // Kita set IDR sebagai base currency biar gampang
     final url = Uri.parse(
       'https://v6.exchangerate-api.com/v6/$apiKey/latest/IDR',
     );
@@ -100,13 +91,12 @@ class _CurrencyTabState extends State<_CurrencyTab> {
             _rates['IDR'] = (conversionRates['IDR'] ?? 1.0).toDouble();
             _rates['USD'] = (conversionRates['USD'] ?? 0.0000625).toDouble();
             _rates['JPY'] = (conversionRates['JPY'] ?? 0.0095238).toDouble();
-            _convert(); // Langsung re-calculate hasil kalo user udah ngetik duluan
+            _convert(); 
           });
         }
       }
     } catch (e) {
       debugPrint('Error fetch API: $e');
-      // Kalo error/gak ada internet, aplikasi ga bakal crash dan tetep pake fallback rate di atas
     }
   }
 
@@ -117,8 +107,6 @@ class _CurrencyTabState extends State<_CurrencyTab> {
       return;
     }
 
-    // Logic diupdate: Bagi dengan rate FromCurrency buat nyari nilai Base(IDR),
-    // terus dikali rate ToCurrency buat dapet hasil akhir.
     double amountInBaseIdr = amount / _rates[_fromCurrency]!;
     double finalResult = amountInBaseIdr * _rates[_toCurrency]!;
 
@@ -132,7 +120,7 @@ class _CurrencyTabState extends State<_CurrencyTab> {
       String temp = _fromCurrency;
       _fromCurrency = _toCurrency;
       _toCurrency = temp;
-      _convert(); // Re-calculate setelah di-swap
+      _convert(); 
     });
   }
 
@@ -158,7 +146,6 @@ class _CurrencyTabState extends State<_CurrencyTab> {
           ),
           const SizedBox(height: 32),
 
-          // Input Amount
           TextField(
             controller: _amountController,
             keyboardType: TextInputType.number,
@@ -180,7 +167,6 @@ class _CurrencyTabState extends State<_CurrencyTab> {
           ),
           const SizedBox(height: 24),
 
-          // Dropdown Row with Swap Button
           Row(
             children: [
               Expanded(
@@ -224,7 +210,6 @@ class _CurrencyTabState extends State<_CurrencyTab> {
           ),
           const SizedBox(height: 40),
 
-          // Result Card
           Container(
             width: double.infinity,
             padding: const EdgeInsets.all(24),
@@ -309,9 +294,6 @@ class _CurrencyTabState extends State<_CurrencyTab> {
   }
 }
 
-// ==========================================
-// TAB 2: TIME ZONES CONVERTER
-// ==========================================
 class _TimeTab extends StatefulWidget {
   const _TimeTab();
 
@@ -326,7 +308,6 @@ class _TimeTabState extends State<_TimeTab> {
   @override
   void initState() {
     super.initState();
-    // Update jam setiap detik biar real-time
     _timer = Timer.periodic(const Duration(seconds: 1), (timer) {
       setState(() {
         _currentTime = DateTime.now().toUtc();
@@ -381,7 +362,7 @@ class _TimeTabState extends State<_TimeTab> {
             'London (UK)',
             _currentTime.add(const Duration(hours: 1)),
             Icons.account_balance,
-          ), // Asumsi BST (UTC+1)
+          ),
         ],
       ),
     );

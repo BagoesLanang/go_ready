@@ -4,7 +4,7 @@ import 'checklist_screen.dart';
 import 'find_item_screen.dart';
 import 'mini_game_screen.dart';
 import 'nearby_page.dart';
-import 'chatbot_screen.dart'; // 🔥 IMPORT SCREEN CHATBOT LU DI SINI
+import 'chatbot_screen.dart'; 
 
 class HomeScreen extends StatelessWidget {
   final Function(int)? onNavigate;
@@ -13,31 +13,27 @@ class HomeScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    // 🔥 BUNGKUS PAKE SCAFFOLD BIAR BISA NAMBAHIN TOMBOL MENGAPUNG (FAB)
     return Scaffold(
-      backgroundColor: Colors.transparent, // Biar background asli nggak rusak
+      backgroundColor: Colors.transparent, 
       
-      // 🔥 INI TOMBOL CHATBOT-NYA BROK
       floatingActionButton: FloatingActionButton(
-        heroTag: "homeChatbotBtn", // PENTING: Biar gak bentrok hero tag-nya
+        heroTag: "homeChatbotBtn", 
         onPressed: () {
           Navigator.push(
             context,
             MaterialPageRoute(builder: (context) => const ChatbotScreen()),
           );
         },
-        backgroundColor: const Color(0xFFD97706), // Warna gold/orange biar elegan
+        backgroundColor: const Color(0xFFD97706),
         elevation: 4,
         child: const Icon(Icons.auto_awesome, color: Colors.white),
       ),
       
-      // 🔥 BODY-NYA TETEP SAMA PERSIS KAYA PUNYA LU
       body: SingleChildScrollView(
         padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 16.0),
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // 🔥 HEADER
             Row(
               mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
@@ -70,7 +66,6 @@ class HomeScreen extends StatelessWidget {
 
             const SizedBox(height: 32),
 
-            // 🔥 BUTTON 1 (TETAP)
             _buildBigActionCard(
               title: "I'm Going Out",
               subtitle: "Start your preparation flow",
@@ -88,7 +83,6 @@ class HomeScreen extends StatelessWidget {
 
             const SizedBox(height: 16),
 
-            // 🔥 BUTTON 2 
             _buildBigActionCard(
               title: "I Forgot Something",
               subtitle: "Quick search & rescue", 
@@ -133,27 +127,11 @@ class HomeScreen extends StatelessWidget {
                 ),
 
                 const SizedBox(width: 16),
-
-                // 🔥 OPTIONAL: kalau mau balikin History tab tinggal aktifin ini
-                /*
-                Expanded(
-                  child: _buildSmallActionCard(
-                    title: "History",
-                    icon: Icons.history,
-                    onTap: () {
-                      if (onNavigate != null) {
-                        onNavigate!(1);
-                      }
-                    },
-                  ),
-                ),
-                */
               ],
             ),
 
             const SizedBox(height: 16),
 
-            // 🔥 MINI GAME (TETAP)
             GestureDetector(
               onTap: () {
                 Navigator.push(
@@ -214,10 +192,6 @@ class HomeScreen extends StatelessWidget {
       ),
     );
   }
-
-  // =========================
-  // HELPER (TETAP)
-  // =========================
 
   Widget _buildBigActionCard({
     required String title,

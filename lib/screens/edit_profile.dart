@@ -40,14 +40,11 @@ class _EditProfilePageState extends State<EditProfilePage> {
     super.dispose();
   }
 
-  // --- FUNGSI SAVE KE MEMORI HP (DENGAN KUNCI UNIK) ---
   Future<void> _saveProfile() async {
     final prefs = await SharedPreferences.getInstance();
     
-    // Ambil ID user yang lagi login biar lacinya ngga ketuker
     final String uniqueId = prefs.getString('user_id') ?? prefs.getString('user_name') ?? 'unknown_user';
 
-    // Simpan ketikan terbaru pake ID sebagai akhiran namanya (PENTING!)
     await prefs.setString('user_name_$uniqueId', _nameController.text);
     await prefs.setString('user_univ_$uniqueId', _univController.text);
     await prefs.setString('user_bio_$uniqueId', _bioController.text);

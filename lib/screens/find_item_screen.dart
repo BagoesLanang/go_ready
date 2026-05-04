@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 import '../theme/colors.dart';
-
-// 🔥 TAMBAHAN BACKEND
 import '../services/api_service.dart';
 import 'package:timeago/timeago.dart' as timeago;
 
@@ -23,19 +21,15 @@ class _FindItemScreenState extends State<FindItemScreen> {
 
     timeago.setLocaleMessages('id', timeago.IdMessages());
 
-    loadItems(); // 🔥 ambil dari backend
+    loadItems(); 
   }
 
-  // =========================
-  // 🔥 FETCH BACKEND
-  // =========================
   Future<void> loadItems() async {
     try {
       final data = await fetchTrip();
 
       print("DATA BACKEND: $data");
 
-      // 🔥 convert backend → format UI lama
       List<Map<String, dynamic>> formatted = data.map((item) {
         return {
           'name': item['item_name'],
@@ -44,7 +38,7 @@ class _FindItemScreenState extends State<FindItemScreen> {
             DateTime.parse(item['created_at']),
             locale: 'id',
           ),
-          'icon': Icons.help_outline, // default icon
+          'icon': Icons.help_outline, 
         };
       }).toList();
 
@@ -62,9 +56,6 @@ class _FindItemScreenState extends State<FindItemScreen> {
     }
   }
 
-  // =========================
-  // 🔍 SEARCH (TETAP)
-  // =========================
   void _runFilter(String enteredKeyword) {
     List<Map<String, dynamic>> results = [];
 
@@ -118,7 +109,6 @@ class _FindItemScreenState extends State<FindItemScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    // SEARCH BAR (TETAP)
                     TextField(
                       onChanged: (value) => _runFilter(value),
                       decoration: InputDecoration(
@@ -161,7 +151,6 @@ class _FindItemScreenState extends State<FindItemScreen> {
 
                     const SizedBox(height: 24),
 
-                    // 🔥 DATA LIST
                     if (_foundItems.isNotEmpty)
                       ..._foundItems.map(
                         (item) => Padding(
@@ -194,9 +183,6 @@ class _FindItemScreenState extends State<FindItemScreen> {
     );
   }
 
-  // =========================
-  // UI CARD (TETAP)
-  // =========================
   Widget _buildMissingItemCard({
     required String itemName,
     required String location,

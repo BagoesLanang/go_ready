@@ -2,10 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart'; // 🔥 IMPORT BRANKAS
+import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:http/http.dart' as http;
 import 'dart:convert';
-
 import '../theme/colors.dart';
 import '../config/api_config.dart';
 import '../utils/user_session.dart';
@@ -25,7 +24,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   final LocalAuthentication auth = LocalAuthentication();
   final FlutterSecureStorage secureStorage =
-      const FlutterSecureStorage(); // 🔥 INIT BRANKAS
+      const FlutterSecureStorage(); 
 
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
@@ -36,9 +35,6 @@ class _LoginScreenState extends State<LoginScreen> {
     _checkIfBiometricSetupDone();
   }
 
-  // =========================
-  // CEK STATUS BIOMETRIK DI HP
-  // =========================
   Future<void> _checkIfBiometricSetupDone() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
@@ -46,9 +42,6 @@ class _LoginScreenState extends State<LoginScreen> {
     });
   }
 
-  // =========================
-  // 🔥 LOGIN PAKE BIOMETRIK (LOGIC BARU)
-  // =========================
   Future<void> _loginWithBiometrics() async {
     if (!_isBiometricEnabled) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -64,7 +57,6 @@ class _LoginScreenState extends State<LoginScreen> {
 
     if (!supported) return;
 
-    // 1. Munculin Pop-Up Sidik Jari
     final authenticated = await auth.authenticate(
       localizedReason: 'Scan sidik jari / Face ID buat masuk',
     );
@@ -72,16 +64,13 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
 
     if (authenticated) {
-      // 2. Kalo sidik jari bener, buka brankas ambil kredensial yang kesimpen
       String? savedEmail = await secureStorage.read(key: 'saved_email');
       String? savedPassword = await secureStorage.read(key: 'saved_password');
 
       if (savedEmail != null && savedPassword != null) {
-        // 3. Masukin data dari brankas ke controller seakan-akan user yang ngetik
         emailController.text = savedEmail;
         passwordController.text = savedPassword;
 
-        // 4. Tembak API Login (Auto-login)
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
             content: Text("Mencoba login..."),
@@ -99,9 +88,6 @@ class _LoginScreenState extends State<LoginScreen> {
     }
   }
 
-  // =========================
-  // LOGIN BACKEND (MANUAL & AUTO)
-  // =========================
   Future<void> loginUser() async {
     final url = Uri.parse("${ApiConfig.baseUrl}/login");
 

@@ -2,7 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 import 'package:local_auth/local_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart'; // 🔥 IMPORT BRANKAS
+import 'package:flutter_secure_storage/flutter_secure_storage.dart'; 
 
 import '../theme/colors.dart';
 
@@ -18,7 +18,7 @@ class _BiometricSetupPageState extends State<BiometricSetupPage> {
   bool _isBiometricEnabled = false;
 
   final LocalAuthentication auth = LocalAuthentication();
-  final FlutterSecureStorage secureStorage = const FlutterSecureStorage(); // 🔥 INIT BRANKAS
+  final FlutterSecureStorage secureStorage = const FlutterSecureStorage(); 
 
   @override
   void initState() {
@@ -26,7 +26,6 @@ class _BiometricSetupPageState extends State<BiometricSetupPage> {
     _loadBiometricStatus(); 
   }
 
-  // --- LOGIC BACA MEMORI HP ---
   Future<void> _loadBiometricStatus() async {
     final prefs = await SharedPreferences.getInstance();
     setState(() {
@@ -35,7 +34,6 @@ class _BiometricSetupPageState extends State<BiometricSetupPage> {
     });
   }
 
-  // --- POP UP BUAT MINTA DATA SEBELUM DISIMPEN KE BRANKAS ---
   Future<Map<String, String>?> _showCredentialDialog() async {
     TextEditingController emailController = TextEditingController();
     TextEditingController passwordController = TextEditingController();
@@ -66,7 +64,7 @@ class _BiometricSetupPageState extends State<BiometricSetupPage> {
           ),
           actions: [
             TextButton(
-              onPressed: () => Navigator.pop(context, null), // Batal
+              onPressed: () => Navigator.pop(context, null), 
               child: const Text('Cancel', style: TextStyle(color: Colors.grey)),
             ),
             ElevatedButton(
@@ -87,9 +85,7 @@ class _BiometricSetupPageState extends State<BiometricSetupPage> {
     );
   }
 
-  // --- LOGIC DAFTAR & SIMPEN KE BRANKAS ---
   Future<void> _registerRealBiometric() async {
-    // 1. Cek HP support biometrik apa ngga
     final bool canAuthenticateWithBiometrics = await auth.canCheckBiometrics;
     final bool canAuthenticate = canAuthenticateWithBiometrics || await auth.isDeviceSupported();
 
@@ -101,13 +97,11 @@ class _BiometricSetupPageState extends State<BiometricSetupPage> {
       return;
     }
 
-    // 2. Minta user masukin email & password buat disimpen
     final credentials = await _showCredentialDialog();
-    if (credentials == null) return; // Kalo user mencet cancel, batalin aja
+    if (credentials == null) return; 
 
     bool authenticated = false;
     try {
-      // 3. Scan Jari
       authenticated = await auth.authenticate(
         localizedReason: 'Tempelin jari lu buat daftarin ke akun ini',
       );
@@ -122,11 +116,9 @@ class _BiometricSetupPageState extends State<BiometricSetupPage> {
     if (!mounted) return;
 
     if (authenticated) {
-      // 🔥 4. KALO JARINYA BENER, TIMPA ISI BRANKAS PAKE DATA AKUN INI!
       await secureStorage.write(key: 'saved_email', value: credentials['email']);
       await secureStorage.write(key: 'saved_password', value: credentials['password']);
 
-      // Simpen status on/off di laci biasa
       final prefs = await SharedPreferences.getInstance();
       await prefs.setBool('biometric_enabled', true);
 
@@ -141,9 +133,7 @@ class _BiometricSetupPageState extends State<BiometricSetupPage> {
     }
   }
 
-  // --- LOGIC HAPUS MEMORI (KOSONGIN BRANKAS) ---
   Future<void> _resetBiometrics() async {
-    // 🔥 HAPUS DATA DARI BRANKAS BIAR NGGA BISA AUTO LOGIN
     await secureStorage.delete(key: 'saved_email');
     await secureStorage.delete(key: 'saved_password');
 

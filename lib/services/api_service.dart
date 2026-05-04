@@ -3,9 +3,6 @@ import 'dart:convert';
 import '../utils/user_session.dart';
 import '../config/api_config.dart';
 
-// ==========================
-// 🔥 SAVE TRIP (FIX TOTAL)
-// ==========================
 Future<bool> saveTrip(List<String> items) async {
   if (UserSession.userId == null) {
     print("❌ ERROR: userId NULL");
@@ -49,9 +46,6 @@ Future<bool> saveTrip(List<String> items) async {
   }
 }
 
-// ==========================
-// 🔥 FETCH TRIP (AMAN)
-// ==========================
 Future<List<dynamic>> fetchTrip() async {
   if (UserSession.userId == null) {
     print("❌ ERROR: userId NULL");
