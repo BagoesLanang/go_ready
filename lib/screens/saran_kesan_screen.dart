@@ -22,15 +22,6 @@ class SaranKesanScreen extends StatelessWidget {
                 color: AppColors.textPrimary,
               ),
             ),
-            const SizedBox(height: 8),
-            const Text(
-              'Berikan saran dan kesan terbaikmu selama mengikuti mata kuliah Teknologi Pemrograman Mobile.',
-              style: TextStyle(
-                fontSize: 14,
-                color: AppColors.textSecondary,
-                height: 1.5,
-              ),
-            ),
             const SizedBox(height: 32),
 
             Container(
@@ -59,85 +50,26 @@ class SaranKesanScreen extends StatelessWidget {
                           color: AppColors.textPrimary,
                         ),
                       ),
-                      Text(
-                        'Required',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppColors.textSecondary,
-                        ),
-                      ),
                     ],
                   ),
                   const SizedBox(height: 12),
-                  TextField(
-                    maxLines: 6,
-                    decoration: InputDecoration(
-                      hintText: 'Tulis kesan dan pesanmu di sini...',
-                      hintStyle: TextStyle(
-                        color: Colors.grey.shade400,
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFF4F5F7),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: const Text(
+                      'Saran: waktu pengerjaan tugas ditambahin pak pliss\n\nKesan: Mantap, pak bagus josjis',
+                      style: TextStyle(
                         fontSize: 14,
-                      ),
-                      filled: true,
-                      fillColor: const Color(0xFFF4F5F7),
-                      border: OutlineInputBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        borderSide: BorderSide.none,
+                        color: AppColors.textPrimary,
+                        height: 1.5,
                       ),
                     ),
                   ),
                   const SizedBox(height: 24),
-
-                  SizedBox(
-                    width: double.infinity,
-                    child: ElevatedButton.icon(
-                      onPressed: () {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          SnackBar(
-                            content: const Text(
-                              'Yeay! Saran & Kesan berhasil dikirim 🚀',
-                              style: TextStyle(color: Colors.white),
-                            ),
-                            backgroundColor: AppColors.successGreen,
-                            behavior: SnackBarBehavior.floating,
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(10),
-                            ),
-                          ),
-                        );
-                        Navigator.pop(context); 
-                      },
-                      icon: const Icon(
-                        Icons.send_rounded,
-                        color: Colors.white,
-                        size: 18,
-                      ),
-                      label: const Text(
-                        'Submit Report',
-                        style: TextStyle(
-                          color: Colors.white,
-                          fontSize: 16,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      ),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF0056D2),
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(height: 16),
-                  const Center(
-                    child: Text(
-                      'Information submitted is securely logged for review.',
-                      style: TextStyle(
-                        fontSize: 11,
-                        color: AppColors.textSecondary,
-                      ),
-                    ),
-                  ),
                 ],
               ),
             ),

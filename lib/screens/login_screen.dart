@@ -23,8 +23,7 @@ class _LoginScreenState extends State<LoginScreen> {
   bool _isBiometricEnabled = false;
 
   final LocalAuthentication auth = LocalAuthentication();
-  final FlutterSecureStorage secureStorage =
-      const FlutterSecureStorage(); 
+  final FlutterSecureStorage secureStorage = const FlutterSecureStorage();
 
   final TextEditingController emailController = TextEditingController();
   final TextEditingController passwordController = TextEditingController();
@@ -128,6 +127,7 @@ class _LoginScreenState extends State<LoginScreen> {
       }
     } catch (e) {
       print("ERROR LOGIN: $e");
+      if (!mounted) return;
       ScaffoldMessenger.of(
         context,
       ).showSnackBar(const SnackBar(content: Text("Gagal koneksi ke server")));

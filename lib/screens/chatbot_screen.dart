@@ -28,7 +28,7 @@ class _ChatbotScreenState extends State<ChatbotScreen> {
   void _initChatbot() {
     _model = GenerativeModel(
       model: 'gemini-2.5-flash',
-      apiKey: 'AIzaSyAWfeALDIleYqp8R9twkKmV_77uFaQOcmo',
+      apiKey: 'AIzaSyD7_PRBC7UxnkvTrLU8kafIuBhldAcGAf4',
       systemInstruction: Content.system(
         'Kamu adalah asisten pintar untuk rekomendasi barang bawaan. '
         'Kamu hanya boleh menjawab hal yang berkaitan dengan packing, barang bawaan, outfit traveling, persiapan pergi, saran barang. '
