@@ -1,0 +1,20 @@
+# Backend
+go_ready_api/node_modules/
+go_ready_api/.env
+go_ready_api/*.log
+
+# Flutter
+goready/build/
+goready/.dart_tool/
+goready/.flutter-plugins
+goready/.flutter-plugins-dependencies
+goready/.packages
+goready/android/.gradle/
+goready/android/local.properties
+
+# VS Code
+.vscode/
+
+# OS
+Thumbs.db
+.DS_Store
